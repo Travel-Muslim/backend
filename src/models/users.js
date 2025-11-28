@@ -1,5 +1,9 @@
 import pool from '../config/db.js'
 
+const findAll = () => {
+    return pool.query(`SELECT id, email, full_name, role, created_at FROM users`)
+}
+
 const findEmail = (email) => {
     return new Promise((resolve, reject) =>
         pool.query(`SELECT * FROM users WHERE email='${email}'`, (error, result) => {
@@ -13,10 +17,10 @@ const findEmail = (email) => {
 }
 
 const create = (data) => {
-    const { id, email, passwordHash, fullname } = data
+    const { id, email, passwordHash, fullname, role } = data
     return pool.query(
-        `INSERT INTO users(id, email, password, full_name) VALUES($1, $2, $3, $4)`,
-        [id, email, passwordHash, fullname]
+        `INSERT INTO users(id, email, password, full_name, role) VALUES($1, $2, $3, $4, $5)`,
+        [id, email, passwordHash, fullname, role]
     )
 }
 
@@ -52,4 +56,4 @@ const updatePassword = (email, passwordHash) => {
     )
 }
 
-export { findEmail, create, updateResetToken, findByResetToken, updatePassword }
+export { findAll, findEmail, create, updateResetToken, findByResetToken, updatePassword }

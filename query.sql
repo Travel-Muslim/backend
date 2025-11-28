@@ -9,5 +9,9 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- nambah column role di table users
 ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'user';
+
+-- update role jadi admin untuk email
+UPDATE users SET role = 'admin' WHERE email = 'robin@gmail.com';
 

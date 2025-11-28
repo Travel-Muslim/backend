@@ -4,8 +4,20 @@ import createError from 'http-errors'
 import { findEmail, create, updateResetToken, findByResetToken, updatePassword } from '../models/users.js'
 import commonHelper from '../helper/common.js'
 import authHelper from '../helper/auth.js'
+import pool from '../config/db.js'
 
 const AuthController = {
+    getAllUsers: async (req, res, next) => {
+        try {
+            const { rows } = await pool.query(
+                'SELECT id, email, full_name, role, created_at FROM users ORDER BY created_at DESC'
+            )
+            commonHelper.response(res, rows, 200, 'Get all users success')
+        } catch (error) {
+            console.log(error)
+            next(createError(500, "Server error"))
+        }
+    },
     register: async (req, res, next) => {
         try {
             const { email, password, fullname } = req.body
@@ -21,6 +33,7 @@ const AuthController = {
                 email,
                 passwordHash,
                 fullname,
+                role: 'user'
             }
 
             create(data)
@@ -114,6 +127,17 @@ const AuthController = {
 
             commonHelper.response(res, null, 200, 'Password reset success')
 
+        } catch (error) {
+            console.log(error)
+            next(createError(500, "Server error"))
+        }
+    },
+
+    getProfile: async (req, res, next) => {
+        try {
+            const { rows: [user] } = await findEmail(req.user.email)
+            delete user.password
+            commonHelper.response(res, user, 200, 'Get profile success')
         } catch (error) {
             console.log(error)
             next(createError(500, "Server error"))
