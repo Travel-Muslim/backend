@@ -3,7 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
-import authRoutes from './routes/auth.routes.js'
+import authRoutes from './routes/routes.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
     })
 })
 
-app.use('/auth', authRoutes)
+app.use('/user', authRoutes)
 
 app.listen(PORT, () => {
     console.log(`Server running at: http://localhost:${PORT}`)

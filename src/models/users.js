@@ -1,21 +1,5 @@
 import pool from '../config/db.js'
 
-const findAll = () => {
-    return pool.query(`SELECT id, email, full_name, role, created_at FROM users`)
-}
-
-const findEmail = (email) => {
-    return new Promise((resolve, reject) =>
-        pool.query(`SELECT * FROM users WHERE email='${email}'`, (error, result) => {
-            if (!error) {
-                resolve(result)
-            } else {
-                reject(error)
-            }
-        })
-    )
-}
-
 const create = (data) => {
     const { id, email, passwordHash, fullname, role } = data
     return pool.query(
@@ -56,4 +40,36 @@ const updatePassword = (email, passwordHash) => {
     )
 }
 
-export { findAll, findEmail, create, updateResetToken, findByResetToken, updatePassword }
+const findAll = () => {
+    return pool.query(`SELECT id, email, full_name, role, created_at FROM users`)
+}
+
+const findEmail = (email) => {
+    return new Promise((resolve, reject) =>
+        pool.query(`SELECT * FROM users WHERE email='${email}'`, (error, result) => {
+            if (!error) {
+                resolve(result)
+            } else {
+                reject(error)
+            }
+        })
+    )
+}
+
+const updateUser = (id, data) => {
+    const { fullname, email } = data
+    return pool.query(
+        `UPDATE users SET full_name = $1, email = $2, updated_at = NOW() WHERE id = $3`,
+        [fullname, email, id]
+    )
+}
+
+const deleteUser = (id) => {
+    return pool.query(`DELETE FROM users WHERE id = $1`, [id])
+}
+
+const findById = (id) => {
+    return pool.query(`SELECT id, email, full_name, role, created_at FROM users WHERE id = $1`, [id])
+}
+
+export { create, findEmail, findAll, updateUser, deleteUser, findById, updateResetToken, findByResetToken, updatePassword }
