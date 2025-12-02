@@ -1,13 +1,13 @@
 # Postman Testing Guide - Muslimah Travel API
 
-Base URL: `http://localhost:4000`
+Base URL: `http://localhost:3000`
 
 ---
 
 ## 1. REGISTER
 
 **Method:** `POST`  
-**URL:** `http://localhost:4000/user/register`  
+**URL:** `http://localhost:3000/user/register`  
 **Headers:** 
 - Content-Type: application/json
 
@@ -25,7 +25,7 @@ Base URL: `http://localhost:4000`
 ## 2. LOGIN
 
 **Method:** `POST`  
-**URL:** `http://localhost:4000/user/login`  
+**URL:** `http://localhost:3000/user/login`  
 **Headers:**
 - Content-Type: application/json
 
@@ -60,7 +60,7 @@ Base URL: `http://localhost:4000`
 ## 3. FORGOT PASSWORD
 
 **Method:** `POST`  
-**URL:** `http://localhost:4000/user/forgot-password`  
+**URL:** `http://localhost:3000/user/forgot-password`  
 **Headers:**
 - Content-Type: application/json
 
@@ -89,7 +89,7 @@ Base URL: `http://localhost:4000`
 ## 4. RESET PASSWORD
 
 **Method:** `POST`  
-**URL:** `http://localhost:4000/user/reset-password`  
+**URL:** `http://localhost:3000/user/reset-password`  
 **Headers:**
 - Content-Type: application/json
 
@@ -106,7 +106,7 @@ Base URL: `http://localhost:4000`
 ## 5. GET PROFILE (Butuh Token)
 
 **Method:** `GET`  
-**URL:** `http://localhost:4000/user/profile`  
+**URL:** `http://localhost:3000/user/profile`  
 **Headers:**
 - Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
@@ -124,7 +124,7 @@ Base URL: `http://localhost:4000`
 ## 6. GET ALL USERS (Admin Only)
 
 **Method:** `GET`  
-**URL:** `http://localhost:4000/user/users`  
+**URL:** `http://localhost:3000/user/users`  
 **Headers:**
 - Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
@@ -138,7 +138,7 @@ UPDATE users SET role = 'admin' WHERE email = 'siti@example.com';
 ## 7. UPDATE USER (Admin Only)
 
 **Method:** `PUT`  
-**URL:** `http://localhost:4000/user/users/uuid-user-yang-mau-diupdate`  
+**URL:** `http://localhost:3000/user/users/uuid-user-yang-mau-diupdate`  
 **Headers:**
 - Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 - Content-Type: application/json
@@ -161,7 +161,7 @@ http://localhost:4000/user/users/123e4567-e89b-12d3-a456-426614174000
 ## 8. DELETE USER (Admin Only)
 
 **Method:** `DELETE`  
-**URL:** `http://localhost:4000/user/users/uuid-user-yang-mau-dihapus`  
+**URL:** `http://localhost:3000/user/users/uuid-user-yang-mau-dihapus`  
 **Headers:**
 - Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
