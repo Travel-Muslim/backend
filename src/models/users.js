@@ -1,10 +1,10 @@
 import pool from '../config/db.js'
 
 const create = (data) => {
-    const { id, email, passwordHash, fullname, role } = data
+    const { id, email, passwordHash, fullname, phoneNumber, role } = data
     return pool.query(
-        `INSERT INTO users(id, email, password, full_name, role) VALUES($1, $2, $3, $4, $5)`,
-        [id, email, passwordHash, fullname, role]
+        `INSERT INTO users(id, email, password, full_name, phone_number, role) VALUES($1, $2, $3, $4, $5, $6)`,
+        [id, email, passwordHash, fullname, phoneNumber, role]
     )
 }
 

@@ -9,7 +9,7 @@ import pool from '../config/db.js'
 const AuthController = {
     register: async (req, res, next) => {
         try {
-            const { email, password, fullname } = req.body
+            const { email, password, fullname, phone_number } = req.body
             const { rowCount } = await findEmail(email)
             
             if (rowCount) {
@@ -22,6 +22,7 @@ const AuthController = {
                 email,
                 passwordHash,
                 fullname,
+                phoneNumber: phone_number,
                 role: 'user'
             }
 
@@ -51,15 +52,26 @@ const AuthController = {
             }
 
             delete user.password
+            delete user.reset_password_token
+            delete user.reset_password_expires
+
             const payload = {
                 email: user.email,
                 role: user.role
             }
-            user.token = authHelper.generateToken(payload)
-            user.refreshToken = authHelper.generateRefreshToken(payload)
 
-            commonHelper.response(res, user, 200, 'Login success')
+            const responseData = { 
+                id: user.id,
+                fullname: user.full_name,
+                email: user.email,
+                phoneNumber: user.phone_number,
+                role: user.role,
+                avatar: user.avatar_url,
+                token: authHelper.generateToken(payload),
+                refreshToken: authHelper.generateRefreshToken(payload)
+            }
 
+            commonHelper.response(res, responseData, 200, 'Login success')
         } catch (error) {
             console.log(error)
             next(createError(500, "Server error"))
