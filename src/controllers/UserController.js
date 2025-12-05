@@ -26,7 +26,7 @@ const AuthController = {
 
             const passwordHash = bcrypt.hashSync(password, 10)
             const data = {
-                id: crypto.randomUUID(),  // 🚀 ID tanpa uuid package
+                id: crypto.randomUUID(), 
                 email,
                 passwordHash,
                 fullname,
@@ -95,7 +95,7 @@ const AuthController = {
                 return commonHelper.response(res, null, 404, 'Email not found')
             }
 
-            const resetToken = crypto.randomUUID() // 🚀 Tanpa uuid package
+            const resetToken = crypto.randomUUID() 
             const now = Date.now()
             const sixHours = 6 * 60 * 60 * 1000
             const resetExpires = new Date(now + sixHours)
