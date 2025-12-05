@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+const pool = require('../config/db.js')
 
 const search = (filters) => {
     const { from, to, date, keyword } = filters
@@ -33,4 +33,4 @@ const search = (filters) => {
     return pool.query(query, params)
 }
 
-export { search }
+module.exports = { search }

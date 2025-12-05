@@ -1,5 +1,5 @@
 const createError = require('http-errors')
-import commonHelper from '../helper/common.js'
+const commonHelper = require('../helper/common')
 const { getAll } = require('../models/locations.js')
 
 const LocationController = {
@@ -23,4 +23,4 @@ const LocationController = {
     }
 }
 
-export default LocationController
+module.exports = LocationController;

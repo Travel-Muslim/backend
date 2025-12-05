@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+const pool = require('../config/db.js')
 
 const getByUserId = (userId) => {
     return pool.query(
@@ -19,4 +19,4 @@ const getByUserId = (userId) => {
     )
 }
 
-export { getByUserId }
+module.exports = { getByUserId }

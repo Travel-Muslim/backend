@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+const pool = require('../config/db.js')
 
 const getFeatured = (limit = 3) => {
     return pool.query(
@@ -20,4 +20,4 @@ const getFeatured = (limit = 3) => {
     )
 }
 
-export { getFeatured }
+module.exports = { getFeatured }

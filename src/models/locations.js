@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+const pool = require('../config/db.js')
 
 const getAll = (isPopular) => {
     let query = `SELECT id, country as name, country, region FROM locations`
@@ -12,4 +12,4 @@ const getAll = (isPopular) => {
     return pool.query(query)
 }
 
-export { getAll }
+module.exports = { getAll }

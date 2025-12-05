@@ -1,5 +1,5 @@
 const createError = require('http-errors')
-import commonHelper from '../helper/common.js'
+const commonHelper = require('../helper/common')
 const { search } = require('../models/destinations.js')
 
 const DestinationController = {
@@ -21,4 +21,4 @@ const DestinationController = {
     }
 }
 
-export default DestinationController
+module.exports = DestinationController;

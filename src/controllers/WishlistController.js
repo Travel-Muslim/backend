@@ -1,6 +1,6 @@
 const createError = require('http-errors')
-import commonHelper from '../helper/common.js'
-import pool from '../config/db.js'
+const commonHelper = require('../helper/common')
+const pool = require('../config/db.js')
 const { getByUserId } = require('../models/wishlists.js')
 
 const WishlistController = {

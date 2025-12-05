@@ -1,10 +1,18 @@
-import { v4 as uuidv4 } from 'uuid'
-import bcrypt from 'bcryptjs'
-import createError from 'http-errors'
-import { findEmail, create, updateResetToken, findByResetToken, updatePassword, updateUser, deleteUser } from '../models/users.js'
-import commonHelper from '../helper/common.js'
-import authHelper from '../helper/auth.js'
-import pool from '../config/db.js'
+const { v4: uuidv4 } = require('uuid')
+const bcrypt = require('bcryptjs')
+const createError = require('http-errors')
+const {
+    findEmail,
+    create,
+    updateResetToken,
+    findByResetToken,
+    updatePassword,
+    updateUser,
+    deleteUser
+} = require('../models/users.js')
+const commonHelper = require('../helper/common')
+const authHelper = require('../helper/auth.js')
+const pool = require('../config/db.js')
 
 const AuthController = {
     register: async (req, res, next) => {
@@ -180,4 +188,4 @@ const AuthController = {
     }
 }
 
-export default AuthController
+module.exports = UserController;

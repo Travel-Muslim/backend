@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+const pool = require('../config/db.js')
 
 const create = (data) => {
     const { id, email, passwordHash, fullname, phoneNumber, role } = data
@@ -72,4 +72,4 @@ const findById = (id) => {
     return pool.query(`SELECT id, email, full_name, role, created_at FROM users WHERE id = $1`, [id])
 }
 
-export { create, findEmail, findAll, updateUser, deleteUser, findById, updateResetToken, findByResetToken, updatePassword }
+module.exports = { create, findEmail, findAll, updateUser, deleteUser, findById, updateResetToken, findByResetToken, updatePassword }

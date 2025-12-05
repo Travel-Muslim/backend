@@ -1,4 +1,4 @@
-import pool from '../config/db.js'
+const pool = require('../config/db.js')
 
 const getLatest = (limit = 2) => {
     return pool.query(
@@ -17,4 +17,4 @@ const getLatest = (limit = 2) => {
     )
 }
 
-export { getLatest }
+module.exports = { getLatest }

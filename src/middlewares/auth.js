@@ -1,5 +1,5 @@
-import jwt from 'jsonwebtoken'
-import commonHelper from '../helper/common.js'
+const jwt = require('jsonwebtoken');
+const commonHelper = require('../helper/common');
 
 const protect = (req, res, next) => {
     try {
@@ -25,4 +25,4 @@ const isAdmin = (req, res, next) => {
     next()
 }
 
-export { protect, isAdmin }
+module.exports = { protect, isAdmin };

@@ -1,5 +1,5 @@
 const createError = require('http-errors')
-import commonHelper from '../helper/common.js'
+const commonHelper = require('../helper/common')
 const { getFeatured } = require('../models/packages.js')
 
 const PackageController = {
@@ -29,4 +29,4 @@ const PackageController = {
     }
 }
 
-export default PackageController
+module.exports = PackageController;

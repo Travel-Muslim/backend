@@ -1,5 +1,5 @@
 const createError = require('http-errors')
-import commonHelper from '../helper/common.js'
+const commonHelper = require('../helper/common')
 const { getLatest } = require('../models/articles.js')
 
 const ArticleController = {
@@ -16,4 +16,4 @@ const ArticleController = {
     }
 }
 
-export default ArticleController
+module.exports = ArticleController;

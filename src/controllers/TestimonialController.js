@@ -1,5 +1,5 @@
 const createError = require('http-errors')
-import commonHelper from '../helper/common.js'
+const commonHelper = require('../helper/common')
 const { getFeatured } = require('../models/testimonials.js')
 
 const TestimonialController = {
@@ -16,4 +16,4 @@ const TestimonialController = {
     }
 }
 
-export default TestimonialController
+module.exports = TestimonialController;
