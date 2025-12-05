@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid')
+const crypto = require('crypto')
 const bcrypt = require('bcryptjs')
 const createError = require('http-errors')
 const {
@@ -26,7 +26,7 @@ const AuthController = {
 
             const passwordHash = bcrypt.hashSync(password, 10)
             const data = {
-                id: uuidv4(),
+                id: crypto.randomUUID(),  // 🚀 ID tanpa uuid package
                 email,
                 passwordHash,
                 fullname,
@@ -95,17 +95,12 @@ const AuthController = {
                 return commonHelper.response(res, null, 404, 'Email not found')
             }
 
-            const resetToken = uuidv4()
+            const resetToken = crypto.randomUUID() // 🚀 Tanpa uuid package
             const now = Date.now()
             const sixHours = 6 * 60 * 60 * 1000
             const resetExpires = new Date(now + sixHours)
-            console.log('Now:', new Date(now))
-            console.log('Expires akan disimpan:', resetExpires)
 
             await updateResetToken(email, resetToken, resetExpires)
-
-            const { rows: [updated] } = await findEmail(email)
-            console.log('Expires di database:', updated.reset_password_expires)
 
             commonHelper.response(res, { resetToken }, 200, 'Reset token generated')
 
@@ -188,4 +183,4 @@ const AuthController = {
     }
 }
 
-module.exports = UserController;
+module.exports = AuthController;
