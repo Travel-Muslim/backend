@@ -1,6 +1,5 @@
-import pg from 'pg';
-
-const { Pool } = pg;
+require('dotenv').config();
+const { Pool } = require('pg');
 
 const pool = new Pool(
   process.env.DATABASE_URL 
@@ -9,7 +8,7 @@ const pool = new Pool(
         ssl: {
           rejectUnauthorized: false
         },
-        max: 10, 
+        max: 10,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 2000,
       }
@@ -30,4 +29,4 @@ pool.on('error', (err) => {
   console.error('Database error:', err.message);
 });
 
-export default pool;
+module.exports = pool;
