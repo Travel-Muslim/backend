@@ -10,6 +10,6 @@ router.get('/categories', protect, ArticleController.getCategories);
 
 router.get('/:id_or_slug', protect, ArticleController.getById);
 
-router.post('/:id/view', ArticleController.incrementView);
+router.post('/:id/view', protect, ArticleController.incrementView);
 
 module.exports = router;
