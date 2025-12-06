@@ -151,38 +151,32 @@ const UserController = {
         }
     },
 
-    getAllUsers: async (req, res, next) => {
+    updateProfileUser: async (req, res, next) => {
         try {
-            const { rows } = await pool.query(
-                'SELECT id, email, full_name, role, created_at FROM users ORDER BY created_at DESC'
-            )
-            commonHelper.response(res, rows, 200, 'Get all users success')
-        } catch (error) {
-            console.log(error)
-            next(createError(500, "Server error"))
-        }
-    },
+            const userId = req.user.id;
+            const { fullname, phone_number, password } = req.body;
 
-    updateUser: async (req, res, next) => {
-        try {
-            const { id } = req.params
-            const { fullname, email } = req.body
-            await updateUser(id, { fullname, email })
-            commonHelper.response(res, null, 200, 'Update user success')
-        } catch (error) {
-            console.log(error)
-            next(createError(500, "Server error"))
-        }
-    },
+            const data = {
+                fullname,
+                phoneNumber: phone_number
+            };
 
-    deleteUser: async (req, res, next) => {
-        try {
-            const { id } = req.params
-            await deleteUser(id)
-            commonHelper.response(res, null, 200, 'Delete user success')
+            const { rows: [user] } = await updateProfile(userId, data);
+
+            if (!user) {
+                return commonHelper.response(res, null, 404, 'User not found');
+            }
+
+            if (password && password.trim() !== '') {
+                const passwordHash = bcrypt.hashSync(password, 10);
+                await updatePasswordById(userId, passwordHash);
+            }
+
+            commonHelper.response(res, user, 200, 'Profile updated successfully');
+
         } catch (error) {
-            console.log(error)
-            next(createError(500, "Server error"))
+            console.log(error);
+            next(createError(500, "Server error"));
         }
     },
 
