@@ -1,7 +1,7 @@
 const createError = require('http-errors')
 const commonHelper = require('../helper/common')
-const pool = require('../config/db.js')
-const { getByUserId } = require('../models/WishlistModel.js')
+const pool = require('../config/db')
+const { getByUserId } = require('../models/WishlistModel')
 
 const WishlistController = {
     getByUser: async (req, res, next) => {

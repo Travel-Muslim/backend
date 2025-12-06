@@ -13,9 +13,10 @@ const {
     deleteAvatar,
     updatePasswordById
 } = require('../models/UserModel.js')
+const cloudinary = require('../config/cloudinary')
 const commonHelper = require('../helper/common')
-const authHelper = require('../helper/auth.js')
-const pool = require('../config/db.js')
+const authHelper = require('../helper/auth')
+const pool = require('../config/db')
 
 const UserController = {
     register: async (req, res, next) => {
