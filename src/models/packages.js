@@ -1,23 +1,88 @@
-const pool = require('../config/db.js')
+const pool = require('../config/db');
 
-const getFeatured = (limit = 3) => {
-    return pool.query(
-        `SELECT 
-            p.id, 
-            p.name, 
-            p.image_url, 
-            p.start_date, 
-            p.duration_days, 
-            p.price,
-            d.name as destination_name,
-            d.location as destination_location
-        FROM packages p
-        JOIN destinations d ON p.destination_id = d.id
-        WHERE p.is_featured = true AND p.is_active = true
-        ORDER BY p.created_at DESC
-        LIMIT $1`,
-        [limit]
-    )
-}
+const PackageModel = {
+    findAll: ({ featured, destination, min_price, max_price, search, limit, offset }) => {
+        let query = 'SELECT * FROM packages WHERE is_active = true';
+        const params = [];
+        let paramIndex = 1;
 
-module.exports = { getFeatured }
+        if (featured === 'true') {
+            query += ` AND is_featured = true`;
+        }
+
+        if (destination) {
+            query += ` AND destination_id = $${paramIndex}`;
+            params.push(destination);
+            paramIndex++;
+        }
+
+        if (search) {
+            query += ` AND (name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`;
+            params.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        if (min_price) {
+            query += ` AND price >= $${paramIndex}`;
+            params.push(min_price);
+            paramIndex++;
+        }
+
+        if (max_price) {
+            query += ` AND price <= $${paramIndex}`;
+            params.push(max_price);
+            paramIndex++;
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+        params.push(limit, offset);
+
+        return pool.query(query, params);
+    },
+
+    countAll: ({ featured, destination, min_price, max_price, search }) => {
+        let query = 'SELECT COUNT(*) FROM packages WHERE is_active = true';
+        const params = [];
+        let paramIndex = 1;
+
+        if (featured === 'true') {
+            query += ` AND is_featured = true`;
+        }
+
+        if (destination) {
+            query += ` AND destination_id = $${paramIndex}`;
+            params.push(destination);
+            paramIndex++;
+        }
+
+        if (search) {
+            query += ` AND (name ILIKE $${paramIndex} OR description ILIKE $${paramIndex})`;
+            params.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        if (min_price) {
+            query += ` AND price >= $${paramIndex}`;
+            params.push(min_price);
+            paramIndex++;
+        }
+
+        if (max_price) {
+            query += ` AND price <= $${paramIndex}`;
+            params.push(max_price);
+        }
+
+        return pool.query(query, params);
+    },
+
+    findById: (id) => {
+        return pool.query(
+            'SELECT * FROM packages WHERE id = $1 AND is_active = true',
+            [id]
+        );
+    }
+};
+
+module.exports = PackageModel;

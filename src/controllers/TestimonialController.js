@@ -1,19 +1,24 @@
-const createError = require('http-errors')
-const commonHelper = require('../helper/common')
-const { getFeatured } = require('../models/testimonials.js')
+const TestimonialModel = require('../models/TestimonialModel');
+const commonHelper = require('../helper/common');
+const createError = require('http-errors');
 
 const TestimonialController = {
-    getFeatured: async (req, res, next) => {
+    getAll: async (req, res, next) => {
         try {
-            const limit = req.query.limit || 3
-            const { rows } = await getFeatured(limit)
+            const { 
+                featured = 'true',  
+                limit = 10 
+            } = req.query;
 
-            commonHelper.response(res, rows, 200, 'Success')
+            const { rows } = await TestimonialModel.findAll(featured, limit);
+
+            commonHelper.response(res, rows, 200, 'Get testimonials success');
+
         } catch (error) {
-            console.log(error)
-            next(createError(500, "Server error"))
+            console.log(error);
+            next(createError(500, "Server error"));
         }
     }
-}
+};
 
 module.exports = TestimonialController;

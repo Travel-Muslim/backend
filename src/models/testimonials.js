@@ -1,19 +1,24 @@
-const pool = require('../config/db.js')
+const pool = require('../config/db');
 
-const getFeatured = (limit = 3) => {
-    return pool.query(
-        `SELECT 
-            id, 
-            name as user_name, 
-            avatar_url as photo_url, 
-            testimonial_text as message,
-            'Indonesia' as user_location
-        FROM testimonials
-        WHERE is_featured = true
-        ORDER BY created_at DESC
-        LIMIT $1`,
-        [limit]
-    )
-}
+const TestimonialModel = {
+    findAll: (featured, limit) => {
+        let query = 'SELECT * FROM testimonials';
+        const params = [];
+        let paramIndex = 1;
 
-module.exports = { getFeatured }
+        if (featured === 'true') {
+            query += ' WHERE is_featured = true';
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        if (limit) {
+            query += ` LIMIT $${paramIndex}`;
+            params.push(limit);
+        }
+
+        return pool.query(query, params);
+    }
+};
+
+module.exports = TestimonialModel;

@@ -1,15 +1,19 @@
-const pool = require('../config/db.js')
+const pool = require('../config/db');
 
-const getAll = (isPopular) => {
-    let query = `SELECT id, country as name, country, region FROM locations`
-    
-    if (isPopular === 'true') {
-        query += ` WHERE country IN ('Indonesia', 'Korea Selatan', 'Jepang', 'Arab Saudi', 'Turki')`
+const LocationModel = {
+    findAll: (region) => {
+        let query = 'SELECT * FROM locations';
+        const params = [];
+
+        if (region) {
+            query += ' WHERE region = $1';
+            params.push(region);
+        }
+
+        query += ' ORDER BY country ASC';
+
+        return pool.query(query, params);
     }
-    
-    query += ` ORDER BY country ASC`
-    
-    return pool.query(query)
-}
+};
 
-module.exports = { getAll }
+module.exports = LocationModel;

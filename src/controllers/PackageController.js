@@ -1,32 +1,75 @@
-const createError = require('http-errors')
-const commonHelper = require('../helper/common')
-const { getFeatured } = require('../models/packages.js')
+const PackageModel = require('../models/PackageModel');
+const commonHelper = require('../helper/common');
+const createError = require('http-errors');
 
 const PackageController = {
-    getFeatured: async (req, res, next) => {
+    getAll: async (req, res, next) => {
         try {
-            const limit = req.query.limit || 3
-            const { rows } = await getFeatured(limit)
-            
-            const packages = rows.map(pkg => ({
-                id: pkg.id,
-                name: pkg.name,
-                image_url: pkg.image_url,
-                start_date: pkg.start_date,
-                duration_days: pkg.duration_days,
-                price: pkg.price,
-                destination: {
-                    name: pkg.destination_name,
-                    location: pkg.destination_location
-                }
-            }))
+            const { 
+                featured,         
+                destination,      
+                min_price,        
+                max_price,        
+                search,           
+                page = 1,
+                limit = 10
+            } = req.query;
 
-            commonHelper.response(res, packages, 200, 'Success')
+            const offset = (page - 1) * limit;
+
+            const { rows } = await PackageModel.findAll({
+                featured,
+                destination,
+                min_price,
+                max_price,
+                search,
+                limit,
+                offset
+            });
+
+            const { rows: [{ count }] } = await PackageModel.countAll({
+                featured,
+                destination,
+                min_price,
+                max_price,
+                search
+            });
+
+            const response = {
+                packages: rows,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total_items: parseInt(count),
+                    total_pages: Math.ceil(count / limit)
+                }
+            };
+
+            commonHelper.response(res, response, 200, 'Get packages success');
+
         } catch (error) {
-            console.log(error)
-            next(createError(500, "Server error"))
+            console.log(error);
+            next(createError(500, "Server error"));
+        }
+    },
+
+    getById: async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            
+            const { rows } = await PackageModel.findById(id);
+
+            if (rows.length === 0) {
+                return commonHelper.response(res, null, 404, 'Package not found');
+            }
+
+            commonHelper.response(res, rows[0], 200, 'Get package success');
+
+        } catch (error) {
+            console.log(error);
+            next(createError(500, "Server error"));
         }
     }
-}
+};
 
 module.exports = PackageController;

@@ -1,8 +1,11 @@
 const express = require('express');
 const PackageController = require('../controllers/PackageController');
+const { protect } = require('../middlewares/auth');
 
-const router = express.Router()
+const router = express.Router();
 
-router.get('/featured', PackageController.getFeatured)
+router.get('/', protect, PackageController.getAll);
+
+router.get('/:id', protect, PackageController.getById);
 
 module.exports = router;
