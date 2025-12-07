@@ -1,6 +1,5 @@
 const DestinationModel = require('../models/DestinationModel');
 const commonHelper = require('../helper/common');
-const createError = require('http-errors');
 
 const DestinationController = {
     getAll: async (req, res, next) => {
@@ -29,21 +28,16 @@ const DestinationController = {
                 halal
             });
 
-            const response = {
-                destinations: rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total_items: parseInt(count),
-                    total_pages: Math.ceil(count / limit)
-                }
-            };
-
-            commonHelper.response(res, response, 200, 'Get destinations success');
+            commonHelper.paginated(res, rows, {
+                page: parseInt(page),
+                total_pages: Math.ceil(count / limit),
+                total_items: parseInt(count),
+                per_page: parseInt(limit)
+            }, 'Get destinations successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
@@ -54,14 +48,14 @@ const DestinationController = {
             const { rows } = await DestinationModel.findById(id);
 
             if (rows.length === 0) {
-                return commonHelper.response(res, null, 404, 'Destination not found');
+                return commonHelper.notFound(res, 'Destination not found');
             }
 
-            commonHelper.response(res, rows[0], 200, 'Get destination success');
+            commonHelper.success(res, rows[0], 'Get destination successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     }
 };

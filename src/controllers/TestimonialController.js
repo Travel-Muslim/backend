@@ -1,6 +1,5 @@
 const TestimonialModel = require('../models/TestimonialModel');
 const commonHelper = require('../helper/common');
-const createError = require('http-errors');
 
 const TestimonialController = {
     getAll: async (req, res, next) => {
@@ -12,11 +11,11 @@ const TestimonialController = {
 
             const { rows } = await TestimonialModel.findAll(featured, limit);
 
-            commonHelper.response(res, rows, 200, 'Get testimonials success');
+            commonHelper.success(res, rows, 'Get testimonials successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     }
 };

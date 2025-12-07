@@ -1,6 +1,5 @@
 const ArticleModel = require('../models/ArticleModel');
 const commonHelper = require('../helper/common');
-const createError = require('http-errors');
 
 const ArticleController = {
     getAll: async (req, res, next) => {
@@ -28,32 +27,27 @@ const ArticleController = {
                 category
             });
 
-            const response = {
-                articles: rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total_items: parseInt(count),
-                    total_pages: Math.ceil(count / limit)
-                }
-            };
-
-            commonHelper.response(res, response, 200, 'Get articles success');
+            commonHelper.paginated(res, rows, {
+                page: parseInt(page),
+                total_pages: Math.ceil(count / limit),
+                total_items: parseInt(count),
+                per_page: parseInt(limit)
+            }, 'Get articles successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
     getCategories: async (req, res, next) => {
         try {
             const { rows } = await ArticleModel.findCategories();
-            commonHelper.response(res, rows, 200, 'Get categories success');
+            commonHelper.success(res, rows, 'Get categories successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
@@ -64,14 +58,14 @@ const ArticleController = {
             const { rows } = await ArticleModel.findByIdOrSlug(id_or_slug);
 
             if (rows.length === 0) {
-                return commonHelper.response(res, null, 404, 'Article not found');
+                return commonHelper.notFound(res, 'Article not found');
             }
 
-            commonHelper.response(res, rows[0], 200, 'Get article success');
+            commonHelper.success(res, rows[0], 'Get article successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
@@ -82,7 +76,7 @@ const ArticleController = {
             const { rows } = await ArticleModel.incrementView(id);
 
             if (rows.length === 0) {
-                return commonHelper.response(res, null, 404, 'Article not found');
+                return commonHelper.notFound(res, 'Article not found');
             }
 
             const response = {
@@ -90,11 +84,11 @@ const ArticleController = {
                 total_views: rows[0].views
             };
 
-            commonHelper.response(res, response, 200, 'View counted');
+            commonHelper.success(res, response, 'View counted');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     }
 };

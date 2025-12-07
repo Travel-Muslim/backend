@@ -1,28 +1,19 @@
-const createError = require('http-errors')
 const commonHelper = require('../helper/common')
-const pool = require('../config/db')
 const { getByUserId } = require('../models/WishlistModel')
 
 const WishlistController = {
     getByUser: async (req, res, next) => {
         try {
-            const userId = req.user.email 
-                      
-            const { rows: [user] } = await pool.query(
-                'SELECT id FROM users WHERE email = $1', 
-                [userId]
-            )
+            const { rows } = await getByUserId(req.user.id)
 
-            if (!user) {
-                return commonHelper.response(res, null, 401, 'Unauthorized')
+            if (rows.length === 0) {
+                return commonHelper.success(res, [], 'Wishlist is empty')
             }
 
-            const { rows } = await getByUserId(user.id)
-
-            commonHelper.response(res, rows, 200, 'Success')
+            commonHelper.success(res, rows, 'Get wishlist successful')
         } catch (error) {
             console.log(error)
-            next(createError(500, "Server error"))
+            commonHelper.error(res, 'Server error', 500)
         }
     }
 }

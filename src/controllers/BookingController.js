@@ -1,5 +1,6 @@
-const Booking = require("../models/bookings");
+const Booking = require("../models/BookingModel");
 const PDFDocument = require("pdfkit");
+const commonHelper = require("../helper/common");
 
 const BookingController = {
   getActiveBookings: async (req, res) => {
@@ -10,19 +11,16 @@ const BookingController = {
 
       const result = await Booking.findActiveByUser(req.user.id, limit, offset);
 
-      res.status(200).json({
-        status: 200,
-        message: "Success",
-        data: result.data,
-        pagination: {
-          page,
-          limit,
-          total_items: result.total,
-          total_pages: Math.ceil(result.total / limit),
-        },
-      });
+      commonHelper.paginated(res, result.data, {
+        page,
+        total_pages: Math.ceil(result.total / limit),
+        total_items: result.total,
+        per_page: limit
+      }, 'Get active bookings successful');
+
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
     }
   },
 
@@ -40,19 +38,16 @@ const BookingController = {
         status
       );
 
-      res.status(200).json({
-        status: 200,
-        message: "Success",
-        data: result.data,
-        pagination: {
-          page,
-          limit,
-          total_items: result.total,
-          total_pages: Math.ceil(result.total / limit),
-        },
-      });
+      commonHelper.paginated(res, result.data, {
+        page,
+        total_pages: Math.ceil(result.total / limit),
+        total_items: result.total,
+        per_page: limit
+      }, 'Get booking history successful');
+
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
     }
   },
 
@@ -61,25 +56,18 @@ const BookingController = {
       const booking = await Booking.findById(req.params.booking_id);
 
       if (!booking) {
-        return res
-          .status(404)
-          .json({ status: 404, message: "Booking not found" });
+        return commonHelper.notFound(res, 'Booking not found');
       }
 
       if (booking.user_id !== req.user.id && req.user.role !== "admin") {
-        return res.status(403).json({
-          status: 403,
-          message: "You don't have access to this booking",
-        });
+        return commonHelper.forbidden(res, "You don't have access to this booking");
       }
 
-      res.status(200).json({
-        status: 200,
-        message: "Success",
-        data: booking,
-      });
+      commonHelper.success(res, booking, 'Get booking detail successful');
+
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
     }
   },
 
@@ -87,20 +75,16 @@ const BookingController = {
     try {
       const booking = await Booking.findById(req.params.booking_id);
 
-      if (!booking)
-        return res
-          .status(404)
-          .json({ status: 404, message: "Booking not found" });
+      if (!booking) {
+        return commonHelper.notFound(res, 'Booking not found');
+      }
 
       if (booking.user_id !== req.user.id && req.user.role !== "admin") {
-        return res.status(403).json({ status: 403, message: "Forbidden" });
+        return commonHelper.forbidden(res, "You don't have access to this ticket");
       }
 
       if (booking.payment_status !== "paid") {
-        return res.status(400).json({
-          status: 400,
-          message: "Cannot download ticket, payment not completed",
-        });
+        return commonHelper.badRequest(res, "Cannot download ticket. Payment not completed yet.");
       }
 
       const doc = new PDFDocument({ size: "A4", margin: 0 });
@@ -149,7 +133,7 @@ const BookingController = {
       writeRow("Package :", booking.package_name);
       writeRow("Date :", booking.departure_date);
       writeRow("Email :", booking.email);
-      writeRow("Traveler :", booking.full_name);
+      writeRow("Traveler :", booking.full_name || booking.fullname);
 
       doc
         .fillColor("#7b4ab8")
@@ -161,7 +145,8 @@ const BookingController = {
 
       doc.end();
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
     }
   },
 
@@ -169,26 +154,20 @@ const BookingController = {
     try {
       const booking = await Booking.findById(req.params.booking_id);
 
-      if (!booking)
-        return res
-          .status(404)
-          .json({ status: 404, message: "Booking not found" });
+      if (!booking) {
+        return commonHelper.notFound(res, 'Booking not found');
+      }
 
       if (booking.user_id !== req.user.id) {
-        return res.status(403).json({ status: 403, message: "Forbidden" });
+        return commonHelper.forbidden(res, "You don't have permission to cancel this booking");
       }
 
       if (booking.status === "cancelled") {
-        return res
-          .status(400)
-          .json({ status: 400, message: "Booking already cancelled" });
+        return commonHelper.badRequest(res, 'Booking already cancelled');
       }
 
       if (new Date(booking.departure_date) <= new Date()) {
-        return res.status(400).json({
-          status: 400,
-          message: "Cannot cancel, trip already started",
-        });
+        return commonHelper.badRequest(res, 'Cannot cancel booking. Trip has already started or passed.');
       }
 
       const updatedBooking = await Booking.cancel(
@@ -196,13 +175,11 @@ const BookingController = {
         req.body.cancel_reason
       );
 
-      res.status(200).json({
-        status: 200,
-        message: "Booking cancelled successfully",
-        data: updatedBooking,
-      });
+      commonHelper.success(res, updatedBooking, 'Booking cancelled successfully');
+
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
     }
   },
 
@@ -215,23 +192,19 @@ const BookingController = {
 
       const newBooking = await Booking.create(bookingData);
 
-      res.status(201).json({
-        status: 201,
-        message: "Booking created successfully",
-        data: newBooking,
-      });
+      commonHelper.created(res, newBooking, 'Booking created successfully');
+
     } catch (error) {
+      console.log(error);
+      
       if (error.message === "PACKAGE_NOT_FOUND") {
-        return res
-          .status(404)
-          .json({ status: 404, message: "Package not found" });
+        return commonHelper.notFound(res, 'Package not found');
       }
       if (error.message === "QUOTA_FULL") {
-        return res
-          .status(400)
-          .json({ status: 400, message: "Package quota is full" });
+        return commonHelper.badRequest(res, 'Package quota is full');
       }
-      res.status(500).json({ message: error.message });
+      
+      commonHelper.error(res, error.message, 500);
     }
   },
 
@@ -251,21 +224,60 @@ const BookingController = {
 
       const result = await Booking.findAll(filters, limit, offset);
 
-      res.status(200).json({
-        status: 200,
-        message: "Success",
-        data: result.data,
-        pagination: {
-          page,
-          limit,
-          total_items: result.total,
-          total_pages: Math.ceil(result.total / limit),
-        },
-      });
+      commonHelper.paginated(res, result.data, {
+        page,
+        total_pages: Math.ceil(result.total / limit),
+        total_items: result.total,
+        per_page: limit
+      }, 'Get bookings successful');
+
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
     }
   },
+
+  getPaymentSummary: async (req, res) => {
+    try {
+      const booking = await Booking.findById(req.params.booking_id);
+
+      if (!booking) {
+        return commonHelper.notFound(res, 'Booking not found');
+      }
+
+      if (booking.user_id !== req.user.id && req.user.role !== "admin") {
+        return commonHelper.forbidden(res, "You don't have access to this booking");
+      }
+
+      const paymentSummary = {
+        booking: {
+          booking_number: booking.booking_code,
+          tour_name: booking.package_name,
+          departure_date: booking.departure_date,
+          total_participants: booking.total_participants
+        },
+        passenger: {
+          name: booking.fullname || booking.full_name,
+          email: booking.email,
+          phone: booking.phone_number
+        },
+        payment: {
+          base_price: booking.total_price,
+          additional_fees: [],
+          subtotal: booking.total_price,
+          total_amount: booking.total_price,
+          payment_status: booking.payment_status,
+          payment_deadline: booking.payment_deadline
+        }
+      };
+
+      commonHelper.success(res, paymentSummary, 'Get payment summary successful');
+
+    } catch (error) {
+      console.log(error);
+      commonHelper.error(res, error.message, 500);
+    }
+  }
 };
 
 module.exports = BookingController;

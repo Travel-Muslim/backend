@@ -1,6 +1,5 @@
 const PackageModel = require('../models/PackageModel');
 const commonHelper = require('../helper/common');
-const createError = require('http-errors');
 
 const PackageController = {
     getAll: async (req, res, next) => {
@@ -35,21 +34,16 @@ const PackageController = {
                 search
             });
 
-            const response = {
-                packages: rows,
-                pagination: {
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    total_items: parseInt(count),
-                    total_pages: Math.ceil(count / limit)
-                }
-            };
-
-            commonHelper.response(res, response, 200, 'Get packages success');
+            commonHelper.paginated(res, rows, {
+                page: parseInt(page),
+                total_pages: Math.ceil(count / limit),
+                total_items: parseInt(count),
+                per_page: parseInt(limit)
+            }, 'Get packages successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
@@ -60,14 +54,14 @@ const PackageController = {
             const { rows } = await PackageModel.findById(id);
 
             if (rows.length === 0) {
-                return commonHelper.response(res, null, 404, 'Package not found');
+                return commonHelper.notFound(res, 'Package not found');
             }
 
-            commonHelper.response(res, rows[0], 200, 'Get package success');
+            commonHelper.success(res, rows[0], 'Get package successful');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     }
 };

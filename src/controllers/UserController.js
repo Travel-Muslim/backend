@@ -1,6 +1,5 @@
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
-const createError = require("http-errors");
 const {
     findEmail,
     updateResetToken,
@@ -25,7 +24,7 @@ const UserController = {
             const { rowCount } = await findEmail(email);
 
             if (rowCount) {
-                return next(createError(403, "Email is already used"));
+                return commonHelper.badRequest(res, "Email is already used");
             }
 
             const passwordHash = bcrypt.hashSync(password, 10);
@@ -53,11 +52,11 @@ const UserController = {
                 data.role
             ]);
 
-            commonHelper.response(res, user, 201, 'Registration success');
+            commonHelper.created(res, user, 'Registration successful');
 
         } catch (error) {
             console.log(error)
-            next(createError(500, "Server error"))
+            commonHelper.error(res, 'Server error', 500)
         }
     },
 
@@ -67,13 +66,13 @@ const UserController = {
             const { rows: [user] } = await findEmail(email)
 
             if (!user) {
-                return commonHelper.response(res, null, 403, 'Email is invalid')
+                return commonHelper.notFound(res, 'Email not found')
             }
 
             const isValidPassword = bcrypt.compareSync(password, user.password)
 
             if (!isValidPassword) {
-                return commonHelper.response(res, null, 403, 'Password is invalid')
+                return commonHelper.unauthorized(res, 'Invalid password')
             }
 
             delete user.password
@@ -81,6 +80,7 @@ const UserController = {
             delete user.reset_password_expires
 
             const payload = {
+                id: user.id,
                 email: user.email,
                 role: user.role
             }
@@ -96,10 +96,19 @@ const UserController = {
                 refreshToken: authHelper.generateRefreshToken(payload)
             }
 
-            commonHelper.response(res, responseData, 200, 'Login success')
+            commonHelper.success(res, responseData, 'Login successful')
         } catch (error) {
             console.log(error)
-            next(createError(500, "Server error"))
+            commonHelper.error(res, 'Server error', 500)
+        }
+    },
+
+    logout: async (req, res, next) => {
+        try {
+            commonHelper.success(res, null, 'Logout successful')
+        } catch (error) {
+            console.log(error)
+            commonHelper.error(res, 'Server error', 500)
         }
     },
 
@@ -109,7 +118,7 @@ const UserController = {
             const { rows: [user] } = await findEmail(email)
 
             if (!user) {
-                return commonHelper.response(res, null, 404, 'Email not found')
+                return commonHelper.notFound(res, 'Email not found')
             }
 
             const resetToken = crypto.randomUUID() 
@@ -119,11 +128,11 @@ const UserController = {
 
             await updateResetToken(email, resetToken, resetExpires)
 
-            commonHelper.response(res, { resetToken }, 200, 'Reset token generated')
+            commonHelper.success(res, { resetToken }, 'Password reset link sent to your email')
 
         } catch (error) {
             console.log(error)
-            next(createError(500, "Server error"))
+            commonHelper.error(res, 'Server error', 500)
         }
     },
 
@@ -133,41 +142,45 @@ const UserController = {
             const { rows: [user] } = await findByResetToken(token)
 
             if (!user) {
-                return commonHelper.response(res, null, 400, 'Invalid or expired token')
+                return commonHelper.badRequest(res, 'Invalid or expired token')
             }
 
             const expiresFixed = new Date(new Date(user.reset_password_expires).getTime() + 7 * 60 * 60 * 1000)
             
             if (new Date() > expiresFixed) {
-                return commonHelper.response(res, null, 400, 'Token has expired')
+                return commonHelper.badRequest(res, 'Token has expired')
             }
 
             const passwordHash = bcrypt.hashSync(newPassword, 10)
             await updatePassword(user.email, passwordHash)
 
-            commonHelper.response(res, null, 200, 'Password reset success')
+            commonHelper.success(res, null, 'Password reset successful')
 
         } catch (error) {
             console.log(error)
-            next(createError(500, "Server error"))
+            commonHelper.error(res, 'Server error', 500)
         }
     },
 
     getProfile: async (req, res, next) => {
         try {
-            const { rows: [user] } = await findEmail(req.user.email)
-            delete user.password
-            commonHelper.response(res, user, 200, 'Get profile success')
+            const { rows: [user] } = await findById(req.user.id)
+            
+            if (!user) {
+                return commonHelper.notFound(res, 'User not found')
+            }
+            
+            commonHelper.success(res, user, 'Get profile successful')
         } catch (error) {
             console.log(error)
-            next(createError(500, "Server error"))
+            commonHelper.error(res, 'Server error', 500)
         }
     },
 
     updateProfileUser: async (req, res, next) => {
         try {
             const userId = req.user.id;
-            const { fullname, phone_number, password } = req.body;
+            const { fullname, phone_number } = req.body;
 
             const data = {
                 fullname,
@@ -177,19 +190,47 @@ const UserController = {
             const { rows: [user] } = await updateProfile(userId, data);
 
             if (!user) {
-                return commonHelper.response(res, null, 404, 'User not found');
+                return commonHelper.notFound(res, 'User not found');
             }
 
-            if (password && password.trim() !== '') {
-                const passwordHash = bcrypt.hashSync(password, 10);
-                await updatePasswordById(userId, passwordHash);
-            }
-
-            commonHelper.response(res, user, 200, 'Profile updated successfully');
+            commonHelper.success(res, user, 'Profile updated successfully');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
+        }
+    },
+
+    changePassword: async (req, res, next) => {
+        try {
+            const userId = req.user.id;
+            const { current_password, new_password, confirm_password } = req.body;
+
+            if (new_password !== confirm_password) {
+                return commonHelper.badRequest(res, 'New password and confirm password do not match');
+            }
+
+            const { rows: [user] } = await findById(userId);
+
+            if (!user) {
+                return commonHelper.notFound(res, 'User not found');
+            }
+
+            const { rows: [userWithPassword] } = await findEmail(req.user.email);
+            const isValidPassword = bcrypt.compareSync(current_password, userWithPassword.password);
+
+            if (!isValidPassword) {
+                return commonHelper.unauthorized(res, 'Current password is incorrect');
+            }
+
+            const passwordHash = bcrypt.hashSync(new_password, 10);
+            await updatePasswordById(userId, passwordHash);
+
+            commonHelper.success(res, null, 'Password changed successfully');
+
+        } catch (error) {
+            console.log(error);
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
@@ -198,7 +239,7 @@ const UserController = {
             const userId = req.user.id;
 
             if (!req.file) {
-                return commonHelper.response(res, null, 400, 'No file uploaded');
+                return commonHelper.badRequest(res, 'No file uploaded');
             }
 
             const { rows: [oldUser] } = await findById(userId);
@@ -220,14 +261,14 @@ const UserController = {
             const { rows: [user] } = await updateAvatar(userId, avatarUrl);
 
             if (!user) {
-                return commonHelper.response(res, null, 404, 'User not found');
+                return commonHelper.notFound(res, 'User not found');
             }
 
-            commonHelper.response(res, { avatar_url: user.avatar_url }, 200, 'Avatar uploaded successfully');
+            commonHelper.success(res, { avatar_url: user.avatar_url }, 'Avatar uploaded successfully');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
@@ -252,14 +293,14 @@ const UserController = {
             const { rows: [user] } = await deleteAvatar(userId);
 
             if (!user) {
-                return commonHelper.response(res, null, 404, 'User not found');
+                return commonHelper.notFound(res, 'User not found');
             }
 
-            commonHelper.response(res, { avatar_url: null }, 200, 'Avatar deleted successfully');
+            commonHelper.success(res, { avatar_url: null }, 'Avatar deleted successfully');
 
         } catch (error) {
             console.log(error);
-            next(createError(500, "Server error"));
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 }
