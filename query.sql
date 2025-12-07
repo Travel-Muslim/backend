@@ -401,5 +401,9 @@ INSERT INTO article_categories (name, slug, description) VALUES
 ('Budaya', 'budaya', 'Budaya dan tradisi islami')
 ON CONFLICT (slug) DO NOTHING;
 
+ALTER TABLE community_posts 
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_community_posts_status ON community_posts(status);
 
 COMMIT;
