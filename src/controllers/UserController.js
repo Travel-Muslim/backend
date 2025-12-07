@@ -1,9 +1,8 @@
-const crypto = require('crypto')
-const bcrypt = require('bcryptjs')
-const createError = require('http-errors')
+const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const createError = require("http-errors");
 const {
     findEmail,
-    create,
     updateResetToken,
     findByResetToken,
     updatePassword,
@@ -11,7 +10,8 @@ const {
     updateProfile,
     updateAvatar,
     deleteAvatar,
-    updatePasswordById
+    updatePasswordById,
+    createUser  
 } = require('../models/UserModel.js')
 const cloudinary = require('../config/cloudinary')
 const commonHelper = require('../helper/common')
@@ -21,26 +21,39 @@ const pool = require('../config/db')
 const UserController = {
     register: async (req, res, next) => {
         try {
-            const { email, password, fullname, phone_number } = req.body
-            const { rowCount } = await findEmail(email)
-            
+            const { email, password, fullname, phone_number } = req.body;
+            const { rowCount } = await findEmail(email);
+
             if (rowCount) {
-                return next(createError(403, "Email is already used"))
+                return next(createError(403, "Email is already used"));
             }
 
-            const passwordHash = bcrypt.hashSync(password, 10)
+            const passwordHash = bcrypt.hashSync(password, 10);
             const data = {
-                id: crypto.randomUUID(), 
+                id: crypto.randomUUID(),
                 email,
                 passwordHash,
                 fullname,
                 phoneNumber: phone_number,
-                role: 'user'
-            }
+                role: "user",
+            };
 
-            create(data)
-                .then(result => commonHelper.response(res, result.rows, 201, "Register success"))
-                .catch(err => res.send(err))
+            const query = `
+                INSERT INTO users (id, email, password, full_name, phone_number, role)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id, email, full_name, phone_number, role
+            `;
+            
+            const { rows: [user] } = await pool.query(query, [
+                data.id,
+                data.email,
+                data.passwordHash,
+                data.fullname,
+                data.phoneNumber,
+                data.role
+            ]);
+
+            commonHelper.response(res, user, 201, 'Registration success');
 
         } catch (error) {
             console.log(error)
@@ -249,8 +262,6 @@ const UserController = {
             next(createError(500, "Server error"));
         }
     },
-
-
 }
 
 module.exports = UserController;
