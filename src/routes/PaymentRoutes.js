@@ -1,7 +1,7 @@
 const express = require('express');
 const PaymentController = require('../controllers/PaymentController');
 const { protect } = require('../middlewares/auth');
-const { uploadImage, handleMulterError } = require('../middlewares/uploadMiddleware');
+const { uploadImage, handleMulterError } = require('../middlewares/upload');
 
 const router = express.Router();
 

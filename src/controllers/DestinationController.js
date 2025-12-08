@@ -1,5 +1,5 @@
 const DestinationModel = require('../models/DestinationModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const DestinationController = {
     getAll: async (req, res, next) => {

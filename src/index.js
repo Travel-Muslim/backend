@@ -10,6 +10,12 @@ const destinationRoutes = require('./routes/DestinationRoutes')
 const locationRoutes = require('./routes/LocationRoutes')
 const testimonialRoutes = require('./routes/TestimonialRoutes')
 const wishlistRoutes = require('./routes/WishlistRoutes')
+const bookingRoutes = require('./routes/BookingRoutes')
+const forumRoutes = require('./routes/ForumRoutes')
+const reviewRoutes = require('./routes/ReviewRoutes')
+const paymentRoutes = require('./routes/PaymentRoutes')
+const itineraryRoutes = require('./routes/ItineraryRoutes')
+const adminRoutes = require('./routes/AdminRoutes')
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -27,6 +33,12 @@ app.use('/destinations', destinationRoutes)
 app.use('/locations', locationRoutes)
 app.use('/testimonials', testimonialRoutes)
 app.use('/wishlists', wishlistRoutes)
+app.use('/bookings', bookingRoutes)
+app.use('/forums', forumRoutes)
+app.use('/reviews', reviewRoutes)
+app.use('/payments', paymentRoutes)
+app.use('/itineraries', itineraryRoutes)
+app.use('/admin', adminRoutes)
 
 app.get('/', (req, res) => {
     res.json({

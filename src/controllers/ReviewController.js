@@ -9,7 +9,7 @@ const {
 } = require('../models/ReviewModel');
 const { findById: findBookingById } = require('../models/BookingModel');
 const cloudinary = require('../config/cloudinary');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const ReviewController = {
     getAll: async (req, res) => {

@@ -1,70 +1,45 @@
 const multer = require('multer');
 const path = require('path');
-const commonHelper = require('../helper/common');
-
-const storage = multer.diskStorage({
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-    }
-});
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 
 const imageFilter = (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-        return cb(new Error('Only image files are allowed!'), false);
-    }
-    
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    if (!allowedTypes.includes(file.mimetype)) {
-        return cb(new Error('Only JPG, JPEG, and PNG files are allowed!'), false);
-    }
-    
-    cb(null, true);
+  if (!file.mimetype.startsWith('image/')) {
+    return cb(new Error('Only image files allowed!'), false);
+  }
+  cb(null, true);
 };
 
+const storageAvatar = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/avatars');
+  },
+  filename: function (req, file, cb) {
+    cb(null, `avatar-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+
 const uploadAvatar = multer({
-    storage: storage,
-    limits: {
-        fileSize: 2 * 1024 * 1024 
-    },
-    fileFilter: imageFilter
+  storage: storageAvatar,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: imageFilter
+});
+
+const reviewImageStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'muslimah-travel/review-media',
+    allowed_formats: ['jpg', 'jpeg', 'png'],
+    transformation: [{ width: 800, height: 800, crop: 'limit' }]
+  }
 });
 
 const uploadReviewMedia = multer({
-    storage: storage,
-    limits: {
-        fileSize: 5 * 1024 * 1024 
-    },
-    fileFilter: imageFilter
-});
-
-const uploadImage = multer({
-    storage: storage,
-    limits: {
-        fileSize: 2 * 1024 * 1024 
-    },
-    fileFilter: imageFilter
-});
-
-const handleMulterError = (err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return commonHelper.badRequest(res, 'File too large. Maximum size is 2MB');
-        }
-        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-            return commonHelper.badRequest(res, 'Unexpected field in file upload');
-        }
-        return commonHelper.badRequest(res, `Upload error: ${err.message}`);
-    } else if (err) {
-        return commonHelper.badRequest(res, err.message);
-    }
-    next();
-};
+  storage: reviewImageStorage,
+  fileFilter: imageFilter
+}); 
 
 module.exports = {
-    uploadAvatar: uploadAvatar.single('avatar'),
-    uploadReviewMedia: uploadReviewMedia.array('media', 5), 
-    uploadImage: uploadImage.single('image'),
-    handleMulterError
+  uploadAvatar,
+  uploadReviewMedia
 };

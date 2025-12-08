@@ -1,5 +1,5 @@
 const PackageModel = require('../models/PackageModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const PackageController = {
     getAll: async (req, res, next) => {

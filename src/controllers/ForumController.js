@@ -9,7 +9,7 @@ const {
     removeComment,
     getStats
 } = require('../models/ForumModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const ForumController = {
     getAll: async (req, res) => {

@@ -6,12 +6,12 @@ const UserModel = {
     },
 
     create: (data) => {
-        const { id, email, passwordHash, name, phoneNumber, role } = data;
+        const { id, email, password, full_name, phone_number, role } = data;
         return pool.query(
-            `INSERT INTO users (id, email, password, name, phone_number, role) 
+            `INSERT INTO users (id, email, password, full_name, phone_number, role) 
              VALUES ($1, $2, $3, $4, $5, $6) 
-             RETURNING id, name, email, phone_number, role, created_at`,
-            [id, email, passwordHash, name, phoneNumber, role]
+             RETURNING id, full_name, email, phone_number, role, created_at`,
+            [id, email, password, full_name, phone_number, role]
         );
     },
 
@@ -61,7 +61,6 @@ const UserModel = {
 
     updateProfile: (id, data) => {
         const { name, email, phoneNumber } = data;
-
         let query = 'UPDATE users SET updated_at = CURRENT_TIMESTAMP';
         const params = [];
         let paramIndex = 1;

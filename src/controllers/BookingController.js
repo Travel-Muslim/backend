@@ -1,6 +1,6 @@
 const Booking = require("../models/BookingModel");
 const PDFDocument = require("pdfkit");
-const commonHelper = require("../helper/common");
+const commonHelper = require("../helpers/common");
 
 const BookingController = {
   getActiveBookings: async (req, res) => {

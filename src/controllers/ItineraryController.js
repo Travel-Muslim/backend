@@ -1,6 +1,6 @@
 const { findByPackageId } = require('../models/ItineraryModel');
 const { findById: findPackageById } = require('../models/PackageModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const ItineraryController = {
     getByPackageId: async (req, res) => {

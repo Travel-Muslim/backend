@@ -1,5 +1,5 @@
 const TestimonialModel = require('../models/TestimonialModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const TestimonialController = {
     getAll: async (req, res, next) => {

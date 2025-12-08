@@ -1,5 +1,5 @@
 const ArticleModel = require('../models/ArticleModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const ArticleController = {
     getAll: async (req, res, next) => {

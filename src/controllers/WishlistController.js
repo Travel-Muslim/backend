@@ -1,4 +1,4 @@
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 const { getByUserId, add, remove, checkExists } = require('../models/WishlistModel');
 const pool = require('../config/db');
 

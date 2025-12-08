@@ -1,5 +1,5 @@
 const LocationModel = require('../models/LocationModel');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const LocationController = {
     getAll: async (req, res, next) => {

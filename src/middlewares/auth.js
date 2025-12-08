@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const commonHelper = require('../helper/common');
+const commonHelper = require('../helpers/common');
 
 const protect = (req, res, next) => {
     try {

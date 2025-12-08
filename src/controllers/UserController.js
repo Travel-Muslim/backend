@@ -1,5 +1,5 @@
-const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+const { v4: uuidv4 } = require('uuid');
 const {
     findEmail,
     updateResetToken,
@@ -13,17 +13,26 @@ const {
     create
 } = require('../models/UserModel.js');
 const cloudinary = require('../config/cloudinary');
-const commonHelper = require('../helper/common');
-const authHelper = require('../helper/auth');
+const commonHelper = require('../helpers/common.js');
+const authHelper = require('../helpers/auth.js');
 
 const UserController = {
     register: async (req, res, next) => {
         try {
-            const { email, password, name, phone_number } = req.body;
+            const { email, password, password_confirm, full_name, phone_number } = req.body;
 
-            if (!email || !password || !name || !phone_number) {
+            if (!email || !password || !password_confirm || !full_name || !phone_number) {
                 return commonHelper.badRequest(res, 'All fields are required');
             }
+
+            if (password !== password_confirm) {
+                return commonHelper.badRequest(res, 'Passwords do not match');
+            }
+
+            if (password.length < 8) {
+                return commonHelper.badRequest(res, 'Password must be at least 8 characters');
+            }
+
             const { rowCount } = await findEmail(email);
             if (rowCount) {
                 return commonHelper.badRequest(res, "Email is already used");
@@ -32,11 +41,11 @@ const UserController = {
             const passwordHash = bcrypt.hashSync(password, 10);
             
             const data = {
-                id: crypto.randomUUID(),
+                id: uuidv4(),
                 email,
-                passwordHash,
-                name,
-                phoneNumber: phone_number,
+                password: passwordHash,
+                full_name: full_name,
+                phone_number: phone_number,
                 role: "user",
             };
 
@@ -50,7 +59,7 @@ const UserController = {
 
             const responseData = {
                 id: user.id,
-                name: user.name,
+                full_name: user.full_name,
                 email: user.email,
                 token: authHelper.generateToken(payload)
             };
@@ -133,6 +142,7 @@ const UserController = {
             const resetExpires = new Date(now + sixHours);
 
             await updateResetToken(email, resetToken, resetExpires);
+
             commonHelper.success(res, { resetToken }, 'Password reset link sent to your email');
 
         } catch (error) {
@@ -313,6 +323,7 @@ const UserController = {
             if (!user) {
                 return commonHelper.notFound(res, 'User not found');
             }
+
             const { rows: [userWithPassword] } = await findEmail(user.email);
 
             const isValidPassword = bcrypt.compareSync(current_password, userWithPassword.password);
