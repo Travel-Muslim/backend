@@ -36,7 +36,8 @@ const AdminController = {
 
     getTopPackages: async (req, res) => {
         try {
-            const result = await AdminModel.getTopPackages();
+            const limit = 3;
+            const result = await AdminModel.getTopPackages(limit);
             
             const data = result.rows.map(row => ({
                 id: row.id,
@@ -44,7 +45,7 @@ const AdminController = {
                 imageUrl: row.image_url,
                 percentage: parseInt(row.percentage) || 0
             }));
-
+            
             return commonHelper.success(res, data);
         } catch (error) {
             console.error('getTopPackages error:', error);
@@ -54,7 +55,8 @@ const AdminController = {
 
     getTopBuyers: async (req, res) => {
         try {
-            const limit = parseInt(req.query.limit) || PAGINATION.TOP_BUYERS_LIMIT;
+            
+            const limit = 6;
             const result = await AdminModel.getTopBuyers(limit);
             
             const data = result.rows.map(row => ({
@@ -64,7 +66,7 @@ const AdminController = {
                 totalBooking: parseInt(row.total_booking) || 0,
                 totalUlasan: parseInt(row.total_ulasan) || 0
             }));
-
+            
             return commonHelper.success(res, data);
         } catch (error) {
             console.error('getTopBuyers error:', error);
@@ -89,7 +91,7 @@ const AdminController = {
 
     getRecentBookings: async (req, res) => {
         try {
-            const limit = parseInt(req.query.limit) || PAGINATION.RECENT_BOOKINGS_LIMIT;
+            const limit = 3;
             const result = await AdminModel.getRecentBookings(limit);
             
             const data = result.rows.map(row => ({
@@ -99,14 +101,13 @@ const AdminController = {
                 harga: parseFloat(row.harga),
                 createdAt: row.created_at
             }));
-
+            
             return commonHelper.success(res, data);
         } catch (error) {
             console.error('getRecentBookings error:', error);
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     },
-    
     
     getAllUsers: async (req, res) => {
         try {
@@ -1232,52 +1233,69 @@ const AdminController = {
     updateAdminProfile: async (req, res) => {
         try {
             const adminId = req.user.id;
-            const { nama, email, noTelepon, password } = req.body;
-
-            let profileData = {};
-
-            try {
-                if (nama) {
-                    profileData.nama = ValidationHelper.validateString(nama, 'Nama', 2, 100, false);
-                }
-                if (email) {
-                    profileData.email = ValidationHelper.validateEmail(email);
-                }
-                if (noTelepon) {
-                    profileData.noTelepon = ValidationHelper.validatePhoneNumber(noTelepon, false);
-                }
-                if (password) {
-                    const validatedPassword = ValidationHelper.validatePassword(password, 'Password', false);
-                    if (validatedPassword) {
-                        profileData.password = await bcrypt.hash(validatedPassword, 10);
-                    }
-                }
-            } catch (validationError) {
-                return commonHelper.badRequest(res, validationError.message);
+            
+            const fullname = req.body.fullname || req.body.full_name;
+            const email = req.body.email;
+            const phoneNumber = req.body.phone_number || req.body.phoneNumber;
+            
+            if (!fullname && !email && !phoneNumber) {
+                return commonHelper.error(res, 'Tidak ada data yang diupdate', HTTP_STATUS.BAD_REQUEST);
             }
-
-            if (Object.keys(profileData).length === 0) {
-                return commonHelper.badRequest(res, 'Tidak ada data yang diupdate');
+            
+            const updates = [];
+            const values = [];
+            let paramCount = 1;
+            
+            if (fullname) {
+                updates.push(`full_name = $${paramCount}`);
+                values.push(fullname);
+                paramCount++;
             }
-
-            const result = await AdminModel.updateAdminProfile(adminId, profileData);
-
+            
+            if (email) {
+                updates.push(`email = $${paramCount}`);
+                values.push(email);
+                paramCount++;
+            }
+            
+            if (phoneNumber) {
+                updates.push(`phone_number = $${paramCount}`);
+                values.push(phoneNumber);
+                paramCount++;
+            }
+            
+            updates.push(`updated_at = CURRENT_TIMESTAMP`);
+            values.push(adminId); 
+            
+            const query = `
+                UPDATE users 
+                SET ${updates.join(', ')}
+                WHERE id = $${paramCount} AND role = 'admin'
+                RETURNING id, full_name, email, phone_number, avatar_url, updated_at
+            `;
+            
+            const result = await pool.query(query, values);
+            
             if (result.rows.length === 0) {
-                return commonHelper.notFound(res, ERROR_MESSAGES.ADMIN_NOT_FOUND);
+                return commonHelper.error(res, 'Admin not found', HTTP_STATUS.NOT_FOUND);
             }
-
-            const admin = result.rows[0];
-            return commonHelper.success(res, {
-                id: admin.id,
-                nama: admin.nama,
-                email: admin.email,
-                noTelepon: admin.no_telepon
-            }, SUCCESS_MESSAGES.PROFILE_UPDATED);
+            
+            const updated = result.rows[0];
+            const data = {
+                id: updated.id,
+                fullName: updated.full_name,
+                email: updated.email,
+                phoneNumber: updated.phone_number,
+                avatarUrl: updated.avatar_url,
+                updatedAt: updated.updated_at
+            };
+            
+            return commonHelper.success(res, data, 'Profile updated successfully');
         } catch (error) {
             console.error('updateAdminProfile error:', error);
             
-            if (error.code === PG_ERROR_CODES.UNIQUE_VIOLATION) {
-                return commonHelper.badRequest(res, ERROR_MESSAGES.USER_ALREADY_EXISTS);
+            if (error.code === '23505') {
+                return commonHelper.error(res, 'Email already in use', HTTP_STATUS.BAD_REQUEST);
             }
             
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);

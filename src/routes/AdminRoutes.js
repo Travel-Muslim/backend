@@ -5,8 +5,7 @@ const uploadPackageImage = require('../middlewares/uploadadmin');
 const uploadUserAvatar = require('../middlewares/uploadAvatar');
 const { 
     adminLimiter, 
-    uploadLimiter, 
-    searchLimiter 
+    uploadLimiter
 } = require('../middlewares/rateLimiter');
 
 const router = express.Router();
@@ -19,16 +18,14 @@ router.get('/dashboard/top-buyers', protect, isAdmin, AdminController.getTopBuye
 router.get('/dashboard/booking-status', protect, isAdmin, AdminController.getBookingStatus);
 router.get('/dashboard/recent-bookings', protect, isAdmin, AdminController.getRecentBookings);
 
-router.get('/users', protect, isAdmin, AdminController.getAllUsers);
-router.get('/users/search', protect, isAdmin, searchLimiter, AdminController.searchUsers);
 router.get('/users/:id', protect, isAdmin, AdminController.getUserDetail);
+router.get('/users', protect, isAdmin, AdminController.getAllUsers);
 router.post('/users', protect, isAdmin, AdminController.createUser);
 router.put('/users/:id', protect, isAdmin, AdminController.updateUser);
 router.delete('/users/:id', protect, isAdmin, AdminController.deleteUser);
 
-router.get('/packages', protect, isAdmin, AdminController.getAllPackages);
-router.get('/packages/search', protect, isAdmin, searchLimiter, AdminController.searchPackages);
 router.get('/packages/:id', protect, isAdmin, AdminController.getPackageDetail);
+router.get('/packages', protect, isAdmin, AdminController.getAllPackages);
 
 router.post(
     '/packages',
@@ -50,15 +47,15 @@ router.put(
 
 router.delete('/packages/:id', protect, isAdmin, AdminController.deletePackage);
 
-router.get('/articles', protect, isAdmin, AdminController.getAllArticles);
-router.get('/articles/search', protect, isAdmin, searchLimiter, AdminController.searchArticles);
 router.get('/articles/:id', protect, isAdmin, AdminController.getArticleDetail);
+router.get('/articles', protect, isAdmin, AdminController.getAllArticles);
 router.post('/articles', protect, isAdmin, AdminController.createArticle);
 router.put('/articles/:id', protect, isAdmin, AdminController.updateArticle);
 router.delete('/articles/:id', protect, isAdmin, AdminController.deleteArticle);
+router.patch('/articles/:id/publish', protect, isAdmin, AdminController.togglePublish);
 
-router.get('/orders', protect, isAdmin, AdminController.getAllOrders);
 router.get('/orders/:tour_id', protect, isAdmin, AdminController.getOrderDetail);
+router.get('/orders', protect, isAdmin, AdminController.getAllOrders);
 router.patch('/orders/:booking_id/status', protect, isAdmin, AdminController.updateOrderStatus);
 router.patch('/orders/:booking_id/payment', protect, isAdmin, AdminController.updatePaymentStatus);
 
@@ -76,8 +73,8 @@ router.post(
 
 router.delete('/profile/photo', protect, isAdmin, AdminController.deleteAdminPhoto);
 
-router.get('/community', protect, isAdmin, AdminController.getAllCommunityPosts);
 router.get('/community/:id', protect, isAdmin, AdminController.getCommunityPostDetail);
+router.get('/community', protect, isAdmin, AdminController.getAllCommunityPosts);
 router.delete('/community/:id', protect, isAdmin, AdminController.deleteCommunityPost);
 
 module.exports = router;

@@ -11,20 +11,25 @@ const AdminModel = {
         `);
     },
 
-    getTopPackages: () => {
+    getTopPackages: (limit = 3) => {
         return pool.query(`
             SELECT 
-                p.id,
-                p.name,
-                p.image_url,
-                COUNT(b.id) as booking_count,
-                ROUND((COUNT(b.id)::NUMERIC / NULLIF((SELECT COUNT(*) FROM bookings WHERE package_id IS NOT NULL), 0) * 100), 0) as percentage
-            FROM packages p
-            LEFT JOIN bookings b ON p.id = b.package_id
-            GROUP BY p.id, p.name, p.image_url
-            ORDER BY booking_count DESC
-            LIMIT 3
-        `);
+                tp.id,
+                tp.name,
+                tp.image_url,
+                COUNT(b.id) as total_booking,
+                ROUND(
+                    (COUNT(b.id)::numeric / NULLIF(
+                        (SELECT COUNT(*) FROM bookings WHERE status != 'cancelled'), 
+                        0
+                    )) * 100
+                ) as percentage
+            FROM tour_packages tp
+            LEFT JOIN bookings b ON tp.id = b.package_id AND b.status != 'cancelled'
+            GROUP BY tp.id, tp.name, tp.image_url
+            ORDER BY total_booking DESC
+            LIMIT $1
+        `, [limit]);
     },
 
     getTopBuyers: (limit = 6) => {
@@ -36,15 +41,15 @@ const AdminModel = {
                 COUNT(DISTINCT b.id) as total_booking,
                 COUNT(DISTINCT r.id) as total_ulasan
             FROM users u
-            LEFT JOIN bookings b ON u.id = b.user_id
+            INNER JOIN bookings b ON u.id = b.user_id AND b.status != 'cancelled'
             LEFT JOIN reviews r ON u.id = r.user_id
             WHERE u.role = 'user'
             GROUP BY u.id, u.full_name, u.avatar_url
-            HAVING COUNT(DISTINCT b.id) > 0
             ORDER BY total_booking DESC, total_ulasan DESC
             LIMIT $1
         `, [limit]);
     },
+
 
     getBookingStatus: () => {
         return pool.query(`
@@ -86,17 +91,16 @@ const AdminModel = {
         return pool.query(`
             SELECT 
                 b.id,
-                json_build_object(
-                    'id', u.id,
-                    'name', u.full_name,
-                    'avatarUrl', u.avatar_url
-                ) as pembeli,
+                b.booking_code as tour_id,
+                u.full_name as pembeli,
+                u.avatar_url,
                 p.name as paket_tour,
                 b.total_price as harga,
                 b.created_at
             FROM bookings b
-            JOIN users u ON b.user_id = u.id
-            JOIN packages p ON b.package_id = p.id
+            INNER JOIN users u ON b.user_id = u.id
+            INNER JOIN packages p ON b.package_id = p.id
+            WHERE b.status != 'cancelled'
             ORDER BY b.created_at DESC
             LIMIT $1
         `, [limit]);
