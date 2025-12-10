@@ -6,16 +6,14 @@ const router = express.Router();
 
 router.get("/active", protect, BookingController.getActiveBookings);
 router.get("/history", protect, BookingController.getBookingHistory);
+router.get("/", protect, BookingController.getBookingsWithFilter);
+router.post("/", protect, BookingController.createBooking);
 
 router.get(
-  "/:booking_id/download-ticket",
-  protect,
-  BookingController.downloadTicket
-);
-router.put("/:booking_id/cancel", protect, BookingController.cancelBooking);
+  "/:booking_id/download-ticket", 
+  protect, 
+  BookingController.downloadTicket);
 router.get("/:booking_id", protect, BookingController.getBookingDetail);
-
-router.post("/", protect, BookingController.createBooking);
-router.get("/", protect, BookingController.getBookingsWithFilter);
+router.put("/:booking_id/cancel", protect, BookingController.cancelBooking);
 
 module.exports = router;

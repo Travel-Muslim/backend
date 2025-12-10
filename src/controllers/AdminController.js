@@ -14,6 +14,7 @@ const {
     PAGINATION,
     CLOUDINARY_FOLDERS
 } = require('../config/constants');
+const pool = require('../config/db');
 
 
 const AdminController = {
@@ -111,13 +112,26 @@ const AdminController = {
     
     getAllUsers: async (req, res) => {
         try {
+            const { search } = req.query; 
             const page = parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit) || PAGINATION.USER_LIST_LIMIT;
             const offset = (page - 1) * limit;
 
-            const users = await AdminModel.getAllUsers(limit, offset);
-            const countResult = await AdminModel.countAllUsers();
-            const total = parseInt(countResult.rows[0].count);
+            let users, total;
+
+            if (search && search.trim() !== '') {
+                const searchQuery = search.trim();
+                users = await AdminModel.searchUsers(searchQuery);
+                total = users.rows.length;
+
+                if (users.rows.length === 0) {
+                    return commonHelper.success(res, [], `Tidak ada user dengan nama "${searchQuery}"`);
+                }
+            } else {
+                users = await AdminModel.getAllUsers(limit, offset);
+                const countResult = await AdminModel.countAllUsers();
+                total = parseInt(countResult.rows[0].count);
+            }
 
             const data = users.rows.map(user => ({
                 displayId: user.display_id,
@@ -137,33 +151,6 @@ const AdminController = {
             });
         } catch (error) {
             console.error('getAllUsers error:', error);
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    },
-
-    searchUsers: async (req, res) => {
-        try {
-            const { search } = req.query;
-
-            if (!search || search.trim() === '') {
-                return commonHelper.badRequest(res, ERROR_MESSAGES.SEARCH_QUERY_REQUIRED);
-            }
-
-            const result = await AdminModel.searchUsers(search.trim());
-
-            const data = result.rows.map(user => ({
-                displayId: user.display_id,
-                id: user.id,
-                namaLengkap: user.full_name,
-                email: user.email,
-                telepon: user.phone_number,
-                password: user.password,
-                tanggalDaftar: user.created_at
-            }));
-
-            return commonHelper.success(res, data);
-        } catch (error) {
-            console.error('searchUsers error:', error);
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     },
@@ -362,19 +349,27 @@ const AdminController = {
             const page = parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE;
             const limit = parseInt(req.query.limit) || PAGINATION.PACKAGE_LIST_LIMIT;
             const offset = (page - 1) * limit;
+            const search = req.query.search?.trim();
 
-            const packages = await AdminModel.getAllPackages(limit, offset);
-            const countResult = await AdminModel.countAllPackages();
+            let packages, countResult;
+
+            if (search) {
+                packages = await AdminModel.searchPackages(search, limit, offset);
+                countResult = await AdminModel.countSearchPackages(search);
+            } else {
+                packages = await AdminModel.getAllPackages(limit, offset);
+                countResult = await AdminModel.countAllPackages();
+            }
+
             const total = parseInt(countResult.rows[0].count);
 
             const data = packages.rows.map(pkg => ({
-                displayId: pkg.display_id,
                 id: pkg.id,
-                namaPaket: pkg.name,
-                lokasi: pkg.location,
-                keberangkatan: pkg.departure_date,
-                maskapai: pkg.airline,
-                harga: parseFloat(pkg.price)
+                name: pkg.name,
+                location: pkg.location,
+                periode: pkg.periode,
+                maskapai: pkg.maskapai,
+                harga: parseFloat(pkg.harga)
             }));
 
             return commonHelper.success(res, data, {
@@ -419,30 +414,24 @@ const AdminController = {
     getPackageDetail: async (req, res) => {
         try {
             const { id } = req.params;
-
-            try {
-                ValidationHelper.validateUUID(id, 'Package ID');
-            } catch (validationError) {
-                return commonHelper.badRequest(res, validationError.message);
-            }
-
+            ValidationHelper.validateUUID(id, 'Package ID');
+            
             const result = await AdminModel.getPackageById(id);
-
             if (result.rows.length === 0) {
                 return commonHelper.notFound(res, ERROR_MESSAGES.PACKAGE_NOT_FOUND);
             }
-
+            
             const pkg = result.rows[0];
             return commonHelper.success(res, {
-                id: pkg.id,
-                namaPaket: pkg.name,
-                lokasi: pkg.location,
-                maskapai: pkg.airline,
-                bandara: pkg.departure_airport,
-                periodeKeberangkatan: pkg.start_date,
-                harga: parseFloat(pkg.price),
-                gambarArtikel: pkg.image_url,
-                itinerary: pkg.itinerary
+                name: pkg.name,
+                location: pkg.location,
+                duration: pkg.duration,
+                periode: pkg.periode,
+                maskapai: pkg.maskapai,
+                bandara: pkg.bandara,
+                harga: parseFloat(pkg.harga),
+                image: pkg.image,
+                itinerary: pkg.itinerary || []
             });
         } catch (error) {
             console.error('getPackageDetail error:', error);
@@ -455,113 +444,84 @@ const AdminController = {
             const { 
                 name, 
                 location, 
-                price, 
-                airline, 
-                departure_airport, 
-                start_date, 
-                duration_days, 
-                itinerary, 
-                quota, 
-                description, 
-                facilities 
+                duration, 
+                periode, 
+                maskapai, 
+                bandara, 
+                harga,
+                itinerary
             } = req.body;
 
             let validatedData = {};
 
             try {
                 validatedData.name = ValidationHelper.validateString(name, 'Nama paket', 3, 255);
-                validatedData.price = ValidationHelper.validatePrice(price);
+                validatedData.harga = ValidationHelper.validatePrice(harga);
                 
                 if (location) {
                     validatedData.location = ValidationHelper.validateString(location, 'Lokasi', 2, 255, false);
                 }
                 
-                if (start_date) {
-                    validatedData.start_date = ValidationHelper.validateDate(start_date, 'Tanggal keberangkatan', false);
+                if (periode) {
+                    validatedData.periode = ValidationHelper.validateDate(periode, 'Periode', false);
                 }
                 
-                if (duration_days) {
-                    validatedData.duration_days = ValidationHelper.validatePositiveInteger(
-                        duration_days, 
+                if (duration) {
+                    validatedData.duration = ValidationHelper.validatePositiveInteger(
+                        duration, 
                         'Durasi', 
-                        CONSTANTS.PACKAGE.MIN_DURATION, 
-                        CONSTANTS.PACKAGE.MAX_DURATION
+                        1, 
+                        365
                     );
-                }
-                
-                if (quota) {
-                    validatedData.quota = ValidationHelper.validatePositiveInteger(quota, 'Kuota', 1, 1000);
                 }
                 
                 if (itinerary) {
                     validatedData.itinerary = ValidationHelper.validateItinerary(itinerary);
                 }
 
-                if (airline) {
-                    validatedData.airline = ValidationHelper.validateString(airline, 'Maskapai', 2, 100, false);
+                if (maskapai) {
+                    validatedData.maskapai = ValidationHelper.validateString(maskapai, 'Maskapai', 2, 100, false);
                 }
 
-                if (departure_airport) {
-                    validatedData.departure_airport = ValidationHelper.validateString(departure_airport, 'Bandara', 3, 100, false);
+                if (bandara) {
+                    validatedData.bandara = ValidationHelper.validateString(bandara, 'Bandara', 3, 100, false);
                 }
             } catch (validationError) {
                 return commonHelper.badRequest(res, validationError.message);
             }
 
-            const imageUrl = req.file ? req.file.path : null;
+            const image = req.file ? req.file.path : null;
 
-            const result = await TransactionHelper.executeTransaction(async (client) => {
-                let destination_id = null;
+            const packageData = {
+                id: uuidv4(),
+                name: validatedData.name,
+                location: validatedData.location || null,
+                image: image,
+                periode: validatedData.periode || null,
+                harga: validatedData.harga,
+                duration: validatedData.duration || 5,
+                itinerary: validatedData.itinerary ? JSON.stringify(validatedData.itinerary) : null,
+                maskapai: validatedData.maskapai || null,
+                bandara: validatedData.bandara || null
+            };
 
-                if (validatedData.location) {
-                    const destResult = await AdminModel.findOrCreateDestination(validatedData.location, imageUrl);
-                    destination_id = destResult.rows[0].id;
-                }
-                
-                const packageData = {
-                    id: uuidv4(),
-                    name: validatedData.name,
-                    destination_id,
-                    image_url: imageUrl,
-                    start_date: validatedData.start_date || null,
-                    price: validatedData.price,
-                    duration_days: validatedData.duration_days || CONSTANTS.PACKAGE.DEFAULT_DURATION_DAYS,
-                    itinerary: validatedData.itinerary ? JSON.stringify(validatedData.itinerary) : null,
-                    quota: validatedData.quota || CONSTANTS.PACKAGE.DEFAULT_QUOTA,
-                    airline: validatedData.airline || null,
-                    departure_airport: validatedData.departure_airport || null
-                };
+            const result = await AdminModel.createPackage(packageData);
 
-                const pkgResult = await client.query(
-                    `INSERT INTO packages (id, name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport) 
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
-                     RETURNING *`,
-                    [
-                        packageData.id,
-                        packageData.name,
-                        packageData.destination_id,
-                        packageData.image_url,
-                        packageData.start_date,
-                        packageData.price,
-                        packageData.duration_days,
-                        packageData.itinerary,
-                        packageData.quota,
-                        packageData.airline,
-                        packageData.departure_airport
-                    ]
-                );
+            const response = {
+                name: result.rows[0].name,
+                location: result.rows[0].location,
+                duration: result.rows[0].duration,
+                periode: result.rows[0].periode,
+                maskapai: result.rows[0].maskapai,
+                bandara: result.rows[0].bandara,
+                harga: parseFloat(result.rows[0].harga),
+                image: result.rows[0].image,
+                itinerary: result.rows[0].itinerary || null
+            };
 
-                return pkgResult;
-            });
-
-            return commonHelper.created(res, result.rows[0], SUCCESS_MESSAGES.PACKAGE_CREATED);
+            return commonHelper.created(res, response, SUCCESS_MESSAGES.PACKAGE_CREATED);
         } catch (error) {
             console.error('createPackage error:', error);
-            
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     },
@@ -569,83 +529,36 @@ const AdminController = {
     updatePackage: async (req, res) => {
         try {
             const { id } = req.params;
-            const { 
-                name, 
-                location, 
-                price, 
-                airline, 
-                departure_airport, 
-                start_date, 
-                duration_days, 
-                itinerary, 
-                quota 
-            } = req.body;
+            const { name, location, duration, periode, maskapai, bandara, harga, itinerary } = req.body;
 
-            try {
-                ValidationHelper.validateUUID(id, 'Package ID');
-            } catch (validationError) {
-                return commonHelper.badRequest(res, validationError.message);
-            }
-
-            let validatedData = {};
-
-            try {
-                if (name) {
-                    validatedData.name = ValidationHelper.validateString(name, 'Nama paket', 3, 255, false);
-                }
-                if (price !== undefined && price !== null) {
-                    validatedData.price = ValidationHelper.validatePrice(price);
-                }
-                if (location) {
-                    validatedData.location = ValidationHelper.validateString(location, 'Lokasi', 2, 255, false);
-                }
-                if (start_date) {
-                    validatedData.start_date = ValidationHelper.validateDate(start_date, 'Tanggal keberangkatan', false);
-                }
-                if (duration_days) {
-                    validatedData.duration_days = ValidationHelper.validatePositiveInteger(
-                        duration_days, 
-                        'Durasi', 
-                        CONSTANTS.PACKAGE.MIN_DURATION, 
-                        CONSTANTS.PACKAGE.MAX_DURATION
-                    );
-                }
-                if (quota) {
-                    validatedData.quota = ValidationHelper.validatePositiveInteger(quota, 'Kuota', 1, 1000);
-                }
-                if (itinerary) {
-                    validatedData.itinerary = ValidationHelper.validateItinerary(itinerary);
-                }
-                if (airline) {
-                    validatedData.airline = ValidationHelper.validateString(airline, 'Maskapai', 2, 100, false);
-                }
-                if (departure_airport) {
-                    validatedData.departure_airport = ValidationHelper.validateString(departure_airport, 'Bandara', 3, 100, false);
-                }
-            } catch (validationError) {
-                return commonHelper.badRequest(res, validationError.message);
-            }
-
-            if (req.file) {
-                validatedData.image_url = req.file.path;
-            }
-
-            if (Object.keys(validatedData).length === 0) {
+            if (Object.keys(req.body).length === 0 && !req.file) {
                 return commonHelper.badRequest(res, 'Tidak ada data yang diupdate');
             }
 
-            const result = await TransactionHelper.executeTransaction(async (client) => {
-                const checkResult = await client.query('SELECT * FROM packages WHERE id = $1', [id]);
+            const checkResult = await pool.query('SELECT * FROM packages WHERE id = $1', [id]);
+            
+            if (checkResult.rows.length === 0) {
+                return commonHelper.notFound(res, ERROR_MESSAGES.PACKAGE_NOT_FOUND);
+            }
+
+            const oldPackage = checkResult.rows[0];
+            const updateData = {};
+
+            if (name) updateData.name = name;
+            if (location) updateData.location = location;
+            if (duration) updateData.duration = parseInt(duration);
+            if (periode) updateData.periode = periode;
+            if (maskapai) updateData.maskapai = maskapai;
+            if (bandara) updateData.bandara = bandara;
+            if (harga) updateData.harga = parseFloat(harga);
+            if (itinerary) updateData.itinerary = itinerary;
+
+            if (req.file) {
+                updateData.image = req.file.path;
                 
-                if (checkResult.rows.length === 0) {
-                    throw new Error('PACKAGE_NOT_FOUND');
-                }
-
-                const oldPackage = checkResult.rows[0];
-
-                if (validatedData.image_url && oldPackage.image_url) {
+                if (oldPackage.image) {
                     try {
-                        const urlParts = oldPackage.image_url.split('/');
+                        const urlParts = oldPackage.image.split('/');
                         const filename = urlParts[urlParts.length - 1];
                         const publicId = `${CLOUDINARY_FOLDERS.PACKAGE_IMAGES}/${filename.split('.')[0]}`;
                         await cloudinary.uploader.destroy(publicId);
@@ -653,63 +566,25 @@ const AdminController = {
                         console.error('Cloudinary delete error:', cloudinaryError);
                     }
                 }
-
-                if (validatedData.location) {
-                    const destResult = await AdminModel.findOrCreateDestination(
-                        validatedData.location, 
-                        validatedData.image_url || oldPackage.image_url
-                    );
-                    validatedData.destination_id = destResult.rows[0].id;
-                }
-
-                let updateQuery = 'UPDATE packages SET updated_at = CURRENT_TIMESTAMP';
-                const params = [];
-                let paramIndex = 1;
-
-                const fieldsToUpdate = {
-                    name: validatedData.name,
-                    destination_id: validatedData.destination_id,
-                    image_url: validatedData.image_url,
-                    start_date: validatedData.start_date,
-                    price: validatedData.price,
-                    duration_days: validatedData.duration_days,
-                    itinerary: validatedData.itinerary ? JSON.stringify(validatedData.itinerary) : undefined,
-                    quota: validatedData.quota,
-                    airline: validatedData.airline,
-                    departure_airport: validatedData.departure_airport
-                };
-
-                Object.keys(fieldsToUpdate).forEach(key => {
-                    if (fieldsToUpdate[key] !== undefined) {
-                        updateQuery += `, ${key} = $${paramIndex}`;
-                        params.push(fieldsToUpdate[key]);
-                        paramIndex++;
-                    }
-                });
-
-                updateQuery += ` WHERE id = $${paramIndex} RETURNING *`;
-                params.push(id);
-
-                const updateResult = await client.query(updateQuery, params);
-                return updateResult;
-            });
-
-            if (result.rows.length === 0) {
-                return commonHelper.notFound(res, ERROR_MESSAGES.PACKAGE_NOT_FOUND);
             }
 
-            return commonHelper.success(res, result.rows[0], SUCCESS_MESSAGES.PACKAGE_UPDATED);
+            const result = await AdminModel.updatePackage(id, updateData);
+
+            const response = {
+                name: result.rows[0].name,
+                location: result.rows[0].location,
+                duration: result.rows[0].duration,
+                periode: result.rows[0].periode,
+                maskapai: result.rows[0].maskapai,
+                bandara: result.rows[0].bandara,
+                harga: parseFloat(result.rows[0].harga),
+                image: result.rows[0].image,
+                itinerary: result.rows[0].itinerary || []
+            };
+
+            return commonHelper.success(res, response, SUCCESS_MESSAGES.PACKAGE_UPDATED);
         } catch (error) {
             console.error('updatePackage error:', error);
-            
-            if (error.message === 'PACKAGE_NOT_FOUND') {
-                return commonHelper.notFound(res, ERROR_MESSAGES.PACKAGE_NOT_FOUND);
-            }
-            
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     },
@@ -724,22 +599,19 @@ const AdminController = {
                 return commonHelper.badRequest(res, validationError.message);
             }
 
-            const result = await TransactionHelper.safeDelete('packages', id, [
-                {
-                    table: 'bookings',
-                    foreignKey: 'package_id',
-                    errorMessage: 'Tidak dapat menghapus paket yang memiliki booking aktif. Batalkan booking terlebih dahulu.'
-                }
-            ]);
-
-            if (result.rows.length === 0) {
+            const checkResult = await pool.query('SELECT image FROM packages WHERE id = $1', [id]);
+            
+            if (checkResult.rows.length === 0) {
                 return commonHelper.notFound(res, ERROR_MESSAGES.PACKAGE_NOT_FOUND);
             }
 
-            const deletedPackage = result.rows[0];
-            if (deletedPackage.image_url) {
+            const deletedPackage = checkResult.rows[0];
+
+            await AdminModel.deletePackage(id);
+
+            if (deletedPackage.image) {
                 try {
-                    const urlParts = deletedPackage.image_url.split('/');
+                    const urlParts = deletedPackage.image.split('/');
                     const filename = urlParts[urlParts.length - 1];
                     const publicId = `${CLOUDINARY_FOLDERS.PACKAGE_IMAGES}/${filename.split('.')[0]}`;
                     await cloudinary.uploader.destroy(publicId);
@@ -750,12 +622,8 @@ const AdminController = {
 
             return commonHelper.success(res, null, SUCCESS_MESSAGES.PACKAGE_DELETED);
         } catch (error) {
+
             console.error('deletePackage error:', error);
-            
-            if (error.message.includes('Tidak dapat menghapus')) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     },
@@ -847,62 +715,43 @@ const AdminController = {
 
     createArticle: async (req, res) => {
         try {
-            const { title, category, cover_image_url, content, excerpt, tags, is_published } = req.body;
-
-            let validatedData = {};
-
-            try {
-                validatedData.title = ValidationHelper.validateString(title, 'Judul artikel', 3, 255);
-                
-                if (content) {
-                    validatedData.content = ValidationHelper.validateString(
-                        content, 
-                        'Isi artikel', 
-                        10, 
-                        CONSTANTS.VALIDATION.CONTENT_MAX_LENGTH, 
-                        false
-                    );
-                }
-
-                if (category) {
-                    validatedData.category = ValidationHelper.validateString(category, 'Kategori', 2, 100, false);
-                }
-
-                if (excerpt) {
-                    validatedData.excerpt = ValidationHelper.validateString(
-                        excerpt, 
-                        'Excerpt', 
-                        10, 
-                        CONSTANTS.VALIDATION.DESCRIPTION_MAX_LENGTH, 
-                        false
-                    );
-                }
-            } catch (validationError) {
-                return commonHelper.badRequest(res, validationError.message);
+            const { title, tanggal, content } = req.body;
+            
+            if (!title || title.trim().length < 3) {
+                return commonHelper.badRequest(res, 'Judul artikel minimal 3 karakter');
             }
-
+            
+            if (!content || content.trim().length < 10) {
+                return commonHelper.badRequest(res, 'Isi artikel minimal 10 karakter');
+            }
+            
+            const slug = title.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .trim();
+            
             const articleData = {
                 id: uuidv4(),
                 author_id: req.user.id,
-                title: validatedData.title,
-                slug: validatedData.title.toLowerCase().replace(/\s+/g, '-'),
-                category: validatedData.category || null,
-                cover_image_url: cover_image_url || null,
-                content: validatedData.content || null,
-                excerpt: validatedData.excerpt || null,
-                tags: tags || null,
-                is_published: is_published || false
+                title: title.trim(),
+                slug,
+                published_at: tanggal || null,
+                content,
+                is_published: false
             };
-
+            
             const result = await AdminModel.createArticle(articleData);
-            return commonHelper.created(res, result.rows[0], SUCCESS_MESSAGES.ARTICLE_CREATED);
+            
+            return commonHelper.created(res, {
+                id: result.rows[0].id,
+                title: result.rows[0].title,
+                slug: result.rows[0].slug,
+                tanggal: result.rows[0].published_at,
+                isPublished: result.rows[0].is_published
+            }, 'Artikel berhasil dibuat');
         } catch (error) {
             console.error('createArticle error:', error);
-            
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            
             return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     },
@@ -1237,6 +1086,7 @@ const AdminController = {
             const fullname = req.body.fullname || req.body.full_name;
             const email = req.body.email;
             const phoneNumber = req.body.phone_number || req.body.phoneNumber;
+            const password = req.body.password;
             
             if (!fullname && !email && !phoneNumber) {
                 return commonHelper.error(res, 'Tidak ada data yang diupdate', HTTP_STATUS.BAD_REQUEST);
@@ -1263,6 +1113,12 @@ const AdminController = {
                 values.push(phoneNumber);
                 paramCount++;
             }
+
+            if (password) {
+                updates.push(`password = $${paramCount}`);
+                values.push(password);
+                paramCount++;
+            }
             
             updates.push(`updated_at = CURRENT_TIMESTAMP`);
             values.push(adminId); 
@@ -1286,6 +1142,7 @@ const AdminController = {
                 fullName: updated.full_name,
                 email: updated.email,
                 phoneNumber: updated.phone_number,
+                password: updated.password,
                 avatarUrl: updated.avatar_url,
                 updatedAt: updated.updated_at
             };

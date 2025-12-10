@@ -12,24 +12,23 @@ const AdminModel = {
     },
 
     getTopPackages: (limit = 3) => {
-        return pool.query(`
-            SELECT 
-                tp.id,
-                tp.name,
-                tp.image_url,
-                COUNT(b.id) as total_booking,
+        return pool.query(
+            `SELECT 
+                p.id,
+                p.name,
+                p.image_url,
+                COUNT(DISTINCT b.id) as booking_count,
                 ROUND(
-                    (COUNT(b.id)::numeric / NULLIF(
-                        (SELECT COUNT(*) FROM bookings WHERE status != 'cancelled'), 
-                        0
-                    )) * 100
+                    (COUNT(DISTINCT b.id)::numeric / NULLIF((SELECT COUNT(*) FROM bookings), 0)) * 100, 
+                    2
                 ) as percentage
-            FROM tour_packages tp
-            LEFT JOIN bookings b ON tp.id = b.package_id AND b.status != 'cancelled'
-            GROUP BY tp.id, tp.name, tp.image_url
-            ORDER BY total_booking DESC
-            LIMIT $1
-        `, [limit]);
+            FROM packages p
+            LEFT JOIN bookings b ON p.id = b.package_id
+            GROUP BY p.id, p.name, p.image_url
+            ORDER BY booking_count DESC
+            LIMIT $1`,
+            [limit]
+        );
     },
 
     getTopBuyers: (limit = 6) => {
@@ -132,18 +131,20 @@ const AdminModel = {
     searchUsers: (query) => {
         return pool.query(
             `SELECT 
-                ROW_NUMBER() OVER (ORDER BY created_at ASC) as display_id,
+                ROW_NUMBER() OVER (ORDER BY created_at DESC) as display_id,
                 id, 
                 full_name, 
                 email, 
                 phone_number, 
-                password,
-                role, 
                 created_at 
-             FROM users 
-             WHERE (full_name ILIKE $1 OR email ILIKE $1) AND role = 'user'
-             ORDER BY created_at DESC`,
-            [`%${query}%`]
+            FROM users 
+            WHERE role = 'user' 
+            AND (
+                full_name ILIKE $1   
+                OR email ILIKE $1
+            )
+            ORDER BY created_at DESC`,
+            [`%${query}%`]  
         );
     },
 
@@ -211,18 +212,17 @@ const AdminModel = {
     getAllPackages: (limit, offset) => {
         return pool.query(
             `SELECT 
-                ROW_NUMBER() OVER (ORDER BY created_at ASC) as display_id,
-                p.id,
-                p.name,
-                d.location,
-                p.start_date as departure_date,
-                p.airline,
-                p.price,
-                p.image_url
-             FROM packages p
-             LEFT JOIN destinations d ON p.destination_id = d.id
-             ORDER BY p.created_at DESC 
-             LIMIT $1 OFFSET $2`,
+                id,
+                name,
+                location,
+                periode,
+                maskapai,
+                harga,
+                image,
+                created_at
+            FROM packages
+            ORDER BY created_at DESC 
+            LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
     },
@@ -231,21 +231,49 @@ const AdminModel = {
         return pool.query('SELECT COUNT(*) FROM packages');
     },
 
-    searchPackages: (query) => {
+    searchPackages: (query, limit, offset) => {
         return pool.query(
             `SELECT 
-                ROW_NUMBER() OVER (ORDER BY created_at ASC) as display_id,
-                p.id,
-                p.name,
-                d.location,
-                p.start_date as departure_date,
-                p.airline,
-                p.price,
-                p.image_url
-             FROM packages p
-             LEFT JOIN destinations d ON p.destination_id = d.id
-             WHERE p.name ILIKE $1 
-             ORDER BY p.created_at DESC`,
+                id,
+                name,
+                location,
+                periode,
+                maskapai,
+                harga,
+                image,
+                created_at
+            FROM packages
+            WHERE name ILIKE $1 OR location ILIKE $1
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3`,
+            [`%${query}%`, limit, offset]
+        );
+    },
+
+    updatePackage: (id, updateData) => {
+        const fields = [];
+        const values = [];
+        let paramIndex = 1;
+
+        Object.keys(updateData).forEach(key => {
+            if (updateData[key] !== undefined) {
+                fields.push(`${key} = $${paramIndex}`);
+                values.push(updateData[key]);
+                paramIndex++;
+            }
+        });
+
+        fields.push('updated_at = CURRENT_TIMESTAMP');
+        values.push(id);
+
+        const query = `UPDATE packages SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+        
+        return pool.query(query, values);
+    },
+
+    countSearchPackages: (query) => {
+        return pool.query(
+            'SELECT COUNT(*) FROM packages WHERE name ILIKE $1 OR location ILIKE $1',
             [`%${query}%`]
         );
     },
@@ -253,69 +281,26 @@ const AdminModel = {
     getPackageById: (id) => {
         return pool.query(
             `SELECT 
-                p.*,
-                d.location
-             FROM packages p
-             LEFT JOIN destinations d ON p.destination_id = d.id
-             WHERE p.id = $1`,
+                id,
+                name,
+                location,
+                duration,
+                periode,
+                maskapai,
+                bandara,
+                harga,
+                image,
+                itinerary,
+                created_at,
+                updated_at
+            FROM packages
+            WHERE id = $1`,
             [id]
-        );
-    },
-
-    findOrCreateDestination: async (location, imageUrl) => {
-        const existing = await pool.query(
-            'SELECT id FROM destinations WHERE location ILIKE $1 LIMIT 1',
-            [location]
-        );
-
-        if (existing.rows.length > 0) {
-            return existing;
-        }
-
-        return pool.query(
-            `INSERT INTO destinations (id, name, location, category, is_halal_friendly, image_url, rating, description)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING id`,
-            [
-                uuidv4(),
-                location,
-                location,
-                'International',
-                true,
-                imageUrl,
-                4.5,
-                `Paket wisata halal ke ${location}`
-            ]
-        );
-    },
-
-    createPackage: (packageData) => {
-        const { id, name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport } = packageData;
-        return pool.query(
-            `INSERT INTO packages (id, name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
-             RETURNING *`,
-            [id, name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport]
-        );
-    },
-
-    updatePackage: (id, packageData) => {
-        const { name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport } = packageData;
-        return pool.query(
-            `UPDATE packages 
-             SET name = $1, destination_id = $2, image_url = $3, start_date = $4, price = $5, 
-                 duration_days = $6, itinerary = $7, quota = $8, airline = $9, departure_airport = $10, updated_at = CURRENT_TIMESTAMP 
-             WHERE id = $11 
-             RETURNING *`,
-            [name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport, id]
         );
     },
 
     deletePackage: (id) => {
-        return pool.query(
-            'DELETE FROM packages WHERE id = $1 RETURNING id',
-            [id]
-        );
+        return pool.query('DELETE FROM packages WHERE id = $1', [id]);
     },
 
     getAllArticles: (limit, offset) => {
@@ -366,12 +351,19 @@ const AdminModel = {
     },
 
     createArticle: (articleData) => {
-        const { id, title, slug, category, cover_image_url, content, excerpt, tags, author_id, is_published } = articleData;
         return pool.query(
-            `INSERT INTO articles (id, title, slug, category, cover_image_url, content, excerpt, tags, author_id, is_published) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
-             RETURNING *`,
-            [id, title, slug, category, cover_image_url, content, excerpt, tags, author_id, is_published || false]
+            `INSERT INTO articles (id, author_id, title, slug, published_at, content, is_published) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            RETURNING *`,
+            [
+                articleData.id,
+                articleData.author_id,
+                articleData.title,
+                articleData.slug,
+                articleData.published_at,
+                articleData.content,
+                articleData.is_published
+            ]
         );
     },
 

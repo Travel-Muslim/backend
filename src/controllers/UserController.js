@@ -1,5 +1,9 @@
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require('uuid');
+const UserModel = require('../models/UserModel.js');
+const cloudinary = require('../config/cloudinary');
+const commonHelper = require('../helpers/common.js');
+const authHelper = require('../helpers/auth.js');
 const {
     findEmail,
     updateResetToken,
@@ -7,14 +11,10 @@ const {
     updatePassword,
     findById,
     updateProfile,
-    updateAvatar,
     deleteAvatar,
     updatePasswordById,
     create
-} = require('../models/UserModel.js');
-const cloudinary = require('../config/cloudinary');
-const commonHelper = require('../helpers/common.js');
-const authHelper = require('../helpers/auth.js');
+} = UserModel;
 
 const UserController = {
     register: async (req, res, next) => {
@@ -22,20 +22,20 @@ const UserController = {
             const { email, password, password_confirm, full_name, phone_number } = req.body;
 
             if (!email || !password || !password_confirm || !full_name || !phone_number) {
-                return commonHelper.badRequest(res, 'All fields are required');
+                return commonHelper.badRequest(res, 'Semua field harus diisi');
             }
 
             if (password !== password_confirm) {
-                return commonHelper.badRequest(res, 'Passwords do not match');
+                return commonHelper.badRequest(res, 'Password dan konfirmasi password tidak cocok');
             }
 
             if (password.length < 8) {
-                return commonHelper.badRequest(res, 'Password must be at least 8 characters');
+                return commonHelper.badRequest(res, 'Password harus terdiri dari minimal 8 karakter');
             }
 
             const { rowCount } = await findEmail(email);
             if (rowCount) {
-                return commonHelper.badRequest(res, "Email is already used");
+                return commonHelper.badRequest(res, "Email sudah digunakan");
             }
 
             const passwordHash = bcrypt.hashSync(password, 10);
@@ -64,7 +64,7 @@ const UserController = {
                 token: authHelper.generateToken(payload)
             };
 
-            commonHelper.created(res, responseData, 'Registration successful');
+            commonHelper.created(res, responseData, 'Registrasi berhasil');
 
         } catch (error) {
             console.log(error);
@@ -77,17 +77,17 @@ const UserController = {
             const { email, password } = req.body;
 
             if (!email || !password) {
-                return commonHelper.badRequest(res, 'Email and password are required');
+                return commonHelper.badRequest(res, 'Email dan password harus diisi');
             }
 
             const { rows: [user] } = await findEmail(email);
             if (!user) {
-                return commonHelper.notFound(res, 'Email not found');
+                return commonHelper.notFound(res, 'Email tidak ditemukan');
             }
 
             const isValidPassword = bcrypt.compareSync(password, user.password);
             if (!isValidPassword) {
-                return commonHelper.unauthorized(res, 'Invalid password');
+                return commonHelper.unauthorized(res, 'Password tidak valid');
             }
 
             const payload = {
@@ -106,7 +106,7 @@ const UserController = {
                 token: authHelper.generateToken(payload)
             };
 
-            commonHelper.success(res, responseData, 'Login successful');
+            commonHelper.success(res, responseData, 'Login berhasil');
 
         } catch (error) {
             console.log(error);
@@ -116,7 +116,7 @@ const UserController = {
 
     logout: async (req, res, next) => {
         try {
-            commonHelper.success(res, null, 'Logout successful');
+            commonHelper.success(res, null, 'Logout berhasil');
         } catch (error) {
             console.log(error);
             commonHelper.error(res, 'Server error', 500);
@@ -128,12 +128,12 @@ const UserController = {
             const { email } = req.body;
 
             if (!email) {
-                return commonHelper.badRequest(res, 'Email is required');
+                return commonHelper.badRequest(res, 'Email harus diisi');
             }
 
             const { rows: [user] } = await findEmail(email);
             if (!user) {
-                return commonHelper.notFound(res, 'Email not found');
+                return commonHelper.notFound(res, 'Email tidak ditemukan');
             }
 
             const resetToken = crypto.randomUUID();
@@ -143,7 +143,7 @@ const UserController = {
 
             await updateResetToken(email, resetToken, resetExpires);
 
-            commonHelper.success(res, { resetToken }, 'Password reset link sent to your email');
+            commonHelper.success(res, { resetToken }, 'Link reset password telah dikirim ke email Anda');
 
         } catch (error) {
             console.log(error);
@@ -153,30 +153,26 @@ const UserController = {
 
     resetPassword: async (req, res, next) => {
         try {
-            const { token, password, confirm_password } = req.body;
+            const { token, password } = req.body;
 
-            if (!token || !password || !confirm_password) {
-                return commonHelper.badRequest(res, 'All fields are required');
-            }
-
-            if (password !== confirm_password) {
-                return commonHelper.badRequest(res, 'Passwords do not match');
+            if (!token || !password ) {
+                return commonHelper.badRequest(res, 'Semua field harus diisi');
             }
 
             const { rows: [user] } = await findByResetToken(token);
             if (!user) {
-                return commonHelper.badRequest(res, 'Invalid or expired token');
+                return commonHelper.badRequest(res, 'Token tidak valid atau sudah kedaluwarsa');
             }
 
             const expiresFixed = new Date(new Date(user.reset_password_expires).getTime() + 7 * 60 * 60 * 1000);
             if (new Date() > expiresFixed) {
-                return commonHelper.badRequest(res, 'Token has expired');
+                return commonHelper.badRequest(res, 'Token sudah kedaluwarsa');
             }
 
             const passwordHash = bcrypt.hashSync(password, 10);
             await updatePassword(user.email, passwordHash);
 
-            commonHelper.success(res, null, 'Password reset successful');
+            commonHelper.success(res, null, 'Reset password berhasil');
 
         } catch (error) {
             console.log(error);
@@ -189,10 +185,10 @@ const UserController = {
             const { rows: [user] } = await findById(req.user.id);
             
             if (!user) {
-                return commonHelper.notFound(res, 'User not found');
+                return commonHelper.notFound(res, 'User tidak ditemukan');
             }
             
-            commonHelper.success(res, user, 'Get profile successful');
+            commonHelper.success(res, user, 'Get profile berhasil');
 
         } catch (error) {
             console.log(error);
@@ -203,21 +199,21 @@ const UserController = {
     updateProfile: async (req, res, next) => {
         try {
             const userId = req.user.id;
-            const { name, email, phone_number } = req.body;
+            const { full_name, email, phone_number } = req.body;
 
-            if (!name && !email && !phone_number) {
-                return commonHelper.badRequest(res, 'At least one field is required to update');
+            if (!full_name && !email && !phone_number) {
+                return commonHelper.badRequest(res, 'Setidaknya satu field harus diisi untuk diperbarui');
             }
 
             if (email) {
                 const { rows: [existingUser] } = await findEmail(email);
                 if (existingUser && existingUser.id !== userId) {
-                    return commonHelper.badRequest(res, 'Email is already used by another user');
+                    return commonHelper.badRequest(res, 'Email sudah digunakan oleh pengguna lain');
                 }
             }
 
             const data = {
-                name,
+                full_name,
                 email,
                 phoneNumber: phone_number
             };
@@ -225,10 +221,10 @@ const UserController = {
             const { rows: [user] } = await updateProfile(userId, data);
 
             if (!user) {
-                return commonHelper.notFound(res, 'User not found');
+                return commonHelper.notFound(res, 'User tidak ditemukan');
             }
 
-            commonHelper.success(res, user, 'Profile updated successfully');
+            commonHelper.success(res, user, 'Profile berhasil diperbarui');
 
         } catch (error) {
             console.log(error);
@@ -236,38 +232,43 @@ const UserController = {
         }
     },
 
-    uploadAvatar: async (req, res, next) => {
+   uploadAvatar: async (req, res) => {
         try {
             const userId = req.user.id;
 
             if (!req.file) {
-                return commonHelper.badRequest(res, 'Avatar file is required');
+            return commonHelper.badRequest(res, 'File avatar diperlukan');
             }
 
             const result = await cloudinary.uploader.upload(req.file.path, {
-                folder: 'muslimah-travel/avatars',
-                transformation: [
-                    { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-                    { quality: 'auto', fetch_format: 'auto' }
-                ],
-                public_id: `avatar_${userId}_${Date.now()}`
+            folder: 'muslimah-travel/avatars',
+            transformation: [
+                { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+                { quality: 'auto', fetch_format: 'auto' }
+            ],
+            public_id: `avatar_${userId}_${Date.now()}`
             });
 
-            const { rows: [user] } = await updateAvatar(userId, result.secure_url);
+            const { rows: [user] } = await UserModel.uploadAvatar(userId, result.secure_url);
 
             if (!user) {
-                return commonHelper.notFound(res, 'User not found');
+            return commonHelper.notFound(res, 'User tidak ditemukan');
             }
 
-            commonHelper.success(res, {
-                avatar_url: user.avatar_url
-            }, 'Avatar uploaded successfully');
+            try { 
+            fs.unlinkSync(req.file.path); 
+            } catch (err) {}
+
+            return commonHelper.success(res, {
+            avatar_url: user.avatar_url
+            }, 'Avatar berhasil diunggah');
 
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, 'Server error', 500);
         }
     },
+
 
     deleteAvatar: async (req, res, next) => {
         try {
@@ -276,7 +277,7 @@ const UserController = {
             const { rows: [currentUser] } = await findById(userId);
             
             if (!currentUser) {
-                return commonHelper.notFound(res, 'User not found');
+                return commonHelper.notFound(res, 'User tidak ditemukan');
             }
 
             if (currentUser.avatar_url) {
@@ -287,13 +288,13 @@ const UserController = {
                     
                     await cloudinary.uploader.destroy(publicId);
                 } catch (cloudinaryError) {
-                    console.log('Cloudinary delete error:', cloudinaryError);
+                    console.log('Cloudinary hapus error:', cloudinaryError);
                 }
             }
 
             await deleteAvatar(userId);
 
-            commonHelper.success(res, null, 'Avatar deleted successfully');
+            commonHelper.success(res, null, 'Avatar berhasil dihapus');
 
         } catch (error) {
             console.log(error);
@@ -304,18 +305,14 @@ const UserController = {
     changePassword: async (req, res, next) => {
         try {
             const userId = req.user.id;
-            const { current_password, new_password, confirm_password } = req.body;
+            const { current_password, new_password } = req.body;
 
-            if (!current_password || !new_password || !confirm_password) {
-                return commonHelper.badRequest(res, 'All fields are required');
-            }
-
-            if (new_password !== confirm_password) {
-                return commonHelper.badRequest(res, 'New passwords do not match');
+            if (!current_password || !new_password ) {
+                return commonHelper.badRequest(res, 'Semua field harus diisi');
             }
 
             if (new_password.length < 8) {
-                return commonHelper.badRequest(res, 'New password must be at least 8 characters');
+                return commonHelper.badRequest(res, 'Password baru harus terdiri dari minimal 8 karakter');
             }
 
             const { rows: [user] } = await findById(userId);
@@ -328,14 +325,14 @@ const UserController = {
 
             const isValidPassword = bcrypt.compareSync(current_password, userWithPassword.password);
             if (!isValidPassword) {
-                return commonHelper.unauthorized(res, 'Current password is incorrect');
+                return commonHelper.unauthorized(res, 'Password saat ini salah');
             }
 
             const passwordHash = bcrypt.hashSync(new_password, 10);
 
             await updatePasswordById(userId, passwordHash);
 
-            commonHelper.success(res, null, 'Password changed successfully');
+            commonHelper.success(res, null, 'Password berhasil diubah');
 
         } catch (error) {
             console.log(error);

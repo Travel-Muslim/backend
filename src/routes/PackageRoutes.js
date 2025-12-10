@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.get('/', protect, PackageController.getAll);
 
-router.get('/:id', protect, PackageController.getById);
+router.get('/:id', protect, PackageController.getPackageDetail);
 
 module.exports = router;

@@ -44,7 +44,7 @@ const UserModel = {
         return pool.query(
             `SELECT 
                 id, 
-                name, 
+                full_name, 
                 email, 
                 phone_number, 
                 avatar_url, 
@@ -60,14 +60,14 @@ const UserModel = {
     },
 
     updateProfile: (id, data) => {
-        const { name, email, phoneNumber } = data;
+        const { full_name, email, phoneNumber } = data;
         let query = 'UPDATE users SET updated_at = CURRENT_TIMESTAMP';
         const params = [];
         let paramIndex = 1;
 
-        if (name) {
-            query += `, name = $${paramIndex}`;
-            params.push(name);
+        if (full_name) {
+            query += `, full_name = $${paramIndex}`;
+            params.push(full_name);
             paramIndex++;
         }
 
@@ -84,13 +84,13 @@ const UserModel = {
         }
 
         query += ` WHERE id = $${paramIndex} 
-                   RETURNING id, name, email, phone_number, avatar_url, role, updated_at`;
+                   RETURNING id, full_name, email, phone_number, avatar_url, role, updated_at`;
         params.push(id);
 
         return pool.query(query, params);
     },
 
-    updateAvatar: (id, avatarUrl) => {
+    uploadAvatar: (id, avatarUrl) => {
         return pool.query(
             `UPDATE users 
              SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP 

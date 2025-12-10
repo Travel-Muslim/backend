@@ -85,7 +85,7 @@ const create = async (data) => {
   try {
     await client.query("BEGIN");
 
-    const pkgQuery = `SELECT price, quota, quota_filled, destination_id FROM packages WHERE id = $1 FOR UPDATE`;
+    const pkgQuery = `SELECT price, quota, quota_filled, destination_id FROM packages WHERE id = $1 AND is_active = true FOR UPDATE`;
     const pkgRes = await client.query(pkgQuery, [data.package_id]);
 
     if (pkgRes.rows.length === 0) throw new Error("PACKAGE_NOT_FOUND");
