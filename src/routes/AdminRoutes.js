@@ -3,10 +3,7 @@ const AdminController = require('../controllers/AdminController');
 const { protect, isAdmin } = require('../middlewares/auth');
 const uploadPackageImage = require('../middlewares/uploadadmin');
 const uploadUserAvatar = require('../middlewares/uploadAvatar');
-const { 
-    adminLimiter, 
-    uploadLimiter
-} = require('../middlewares/rateLimiter');
+const { adminLimiter, uploadLimiter } = require('../middlewares/rateLimiter');
 
 const router = express.Router();
 
@@ -26,25 +23,8 @@ router.delete('/users/:id', protect, isAdmin, AdminController.deleteUser);
 
 router.get('/packages/:id', protect, isAdmin, AdminController.getPackageDetail);
 router.get('/packages', protect, isAdmin, AdminController.getAllPackages);
-
-router.post(
-    '/packages',
-    protect,
-    isAdmin,
-    uploadLimiter,
-    uploadPackageImage,
-    AdminController.createPackage
-);
-
-router.put(
-    '/packages/:id',
-    protect,
-    isAdmin,
-    uploadLimiter,
-    uploadPackageImage,
-    AdminController.updatePackage
-);
-
+router.post('/packages', protect, isAdmin, uploadPackageImage, AdminController.createPackage);
+router.put('/packages/:id', protect, isAdmin, uploadPackageImage, AdminController.updatePackage);
 router.delete('/packages/:id', protect, isAdmin, AdminController.deletePackage);
 
 router.get('/articles/:id', protect, isAdmin, AdminController.getArticleDetail);
@@ -61,16 +41,7 @@ router.patch('/orders/:booking_id/payment', protect, isAdmin, AdminController.up
 
 router.get('/profile', protect, isAdmin, AdminController.getAdminProfile);
 router.put('/profile', protect, isAdmin, AdminController.updateAdminProfile);
-
-router.post(
-    '/profile/photo',
-    protect,
-    isAdmin,
-    uploadLimiter,
-    uploadUserAvatar,
-    AdminController.uploadAdminPhoto
-);
-
+router.post('/profile/photo', protect, isAdmin, uploadLimiter, uploadUserAvatar, AdminController.uploadAdminPhoto);
 router.delete('/profile/photo', protect, isAdmin, AdminController.deleteAdminPhoto);
 
 router.get('/community/:id', protect, isAdmin, AdminController.getCommunityPostDetail);
