@@ -1,5 +1,5 @@
 const express = require('express');
-const DashboardController = require('../controllers/AdminController');
+const AdminController = require('../controllers/AdminController');
 const { protect, isAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
@@ -7,10 +7,8 @@ const router = express.Router();
 router.use(protect);
 router.use(isAdmin);
 
-router.get('/stats', DashboardController.getDashboardStats);
-router.get('/top-packages', DashboardController.getTopPackages);
-router.get('/top-buyers', DashboardController.getTopBuyers);
-router.get('/booking-status', DashboardController.getBookingStatus);
-router.get('/recent-bookings', DashboardController.getRecentBookings);
-
+router.get('/stats', protect, isAdmin, AdminController.getDashboardStats);
+router.get('/top-packages', protect, isAdmin, AdminController.getTopPackages);
+router.get('/top-buyers', protect, isAdmin, AdminController.getTopBuyers);
+router.get('/booking-status', protect, isAdmin, AdminController.getBookingStatus);
 module.exports = router;

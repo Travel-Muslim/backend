@@ -96,24 +96,6 @@ const AdminController = {
         }
     },
 
-    getRecentBookings: async (req, res) => {
-        try {
-            const result = await AdminModel.getRecentBookings(PAGINATION.RECENT_BOOKINGS_LIMIT);
-            
-            const data = result.rows.map(booking => ({
-                pembeli: booking.buyer_name,
-                paketTour: booking.package_name,
-                harga: parseFloat(booking.total_price),
-                profileImage: booking.avatar_url
-            }));
-
-            return commonHelper.success(res, data, 'Get recent bookings successful');
-        } catch (error) {
-            console.error('getRecentBookings error:', error);
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    },
-
     getAllUsers: async (req, res) => {
         try {
             const search = req.query.search?.trim();
@@ -746,36 +728,6 @@ const AdminController = {
         }
     },
 
-    getOrderDetail: async (req, res) => {
-        try {
-            const { tour_id } = req.params;
-
-            const result = await AdminModel.getOrderByTourId(tour_id);
-
-            if (result.rows.length === 0) {
-                return commonHelper.notFound(res, ERROR_MESSAGES.ORDER_NOT_FOUND);
-            }
-
-            const order = result.rows[0];
-
-            return commonHelper.success(res, {
-                tourId: order.booking_code,
-                namaLengkap: order.full_name,
-                email: order.email,
-                noTelepon: order.phone_number,
-                namaPaket: order.package_name,
-                tanggalKeberangkatan: order.departure_date,
-                jumlahPeserta: order.total_participants,
-                totalPembayaran: parseFloat(order.total_price),
-                status: order.status,
-                statusPembayaran: order.payment_status
-            }, 'Get order successful');
-        } catch (error) {
-            console.error('getOrderDetail error:', error);
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    },
-
     updateOrderStatus: async (req, res) => {
         try {
             const { booking_id } = req.params;
@@ -957,112 +909,8 @@ const AdminController = {
         }
     },
 
-    getAllCommunityPosts: async (req, res) => {
-        try {
-            const month = req.query.month ? parseInt(req.query.month) : null;
-            const page = parseInt(req.query.page) || PAGINATION.DEFAULT_PAGE;
-            const limit = parseInt(req.query.limit) || PAGINATION.DEFAULT_LIMIT;
-            const offset = (page - 1) * limit;
 
-            let posts, countResult;
-
-            if (month) {
-                posts = await AdminModel.getCommunityPostsByMonth(month, limit, offset);
-                countResult = await AdminModel.countCommunityPostsByMonth(month);
-            } else {
-                posts = await AdminModel.getAllCommunityPosts(limit, offset);
-                countResult = await AdminModel.countAllCommunityPosts();
-            }
-
-            const total = parseInt(countResult.rows[0].count);
-
-            const data = posts.rows.map(post => ({
-                id: post.id,
-                judul: post.title,
-                preview: post.content ? post.content.substring(0, 100) + '...' : '',
-                author: {
-                    nama: post.author_name,
-                    rating: parseFloat(post.author_rating) || 0
-                },
-                timeAgo: getTimeAgo(post.created_at)
-            }));
-
-            return commonHelper.paginated(res, data, {
-                page,
-                limit,
-                total_items: total,
-                total_pages: Math.ceil(total / limit)
-            }, 'Get community posts successful');
-        } catch (error) {
-            console.error('getAllCommunityPosts error:', error);
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    },
-
-    getCommunityPostDetail: async (req, res) => {
-        try {
-            const { id } = req.params;
-            ValidationHelper.validateUUID(id, 'Post ID');
-
-            const result = await AdminModel.getCommunityPostById(id);
-
-            if (result.rows.length === 0) {
-                return commonHelper.notFound(res, 'Post not found');
-            }
-
-            const post = result.rows[0];
-
-            return commonHelper.success(res, {
-                id: post.id,
-                judul: post.title,
-                content: post.content,
-                author: {
-                    nama: post.author_name,
-                    rating: parseFloat(post.author_rating) || 0
-                },
-                createdAt: post.created_at
-            }, 'Get post successful');
-        } catch (error) {
-            console.error('getCommunityPostDetail error:', error);
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    },
-
-    deleteCommunityPost: async (req, res) => {
-        try {
-            const { id } = req.params;
-            ValidationHelper.validateUUID(id, 'Post ID');
-
-            const result = await AdminModel.deleteCommunityPost(id);
-
-            if (result.rows.length === 0) {
-                return commonHelper.notFound(res, 'Post not found');
-            }
-
-            return commonHelper.success(res, null, SUCCESS_MESSAGES.POST_DELETED);
-        } catch (error) {
-            console.error('deleteCommunityPost error:', error);
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    }
 };
 
-function getTimeAgo(date) {
-    const now = new Date();
-    const diffMs = now - new Date(date);
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Hari Ini';
-    if (diffDays === 1) return '1 Hari Lalu';
-    if (diffDays < 7) return `${diffDays} Hari Lalu`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} Minggu Lalu`;
-    return `${Math.floor(diffDays / 30)} Bulan Lalu`;
-}
 
 module.exports = AdminController;
