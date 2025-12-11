@@ -1,9 +1,13 @@
 const express = require('express');
 const ItineraryController = require('../controllers/ItineraryController');
-const { protect } = require('../middlewares/auth');
+const { protect, isAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
 
-router.get('/tour-packages/:package_id/itineraries', protect, ItineraryController.getByPackageId);
+router.get('/:package_id', protect, ItineraryController.getByPackageId);
+
+router.post('/', protect, isAdmin, ItineraryController.createItinerary);
+router.put('/:id', protect, isAdmin, ItineraryController.updateItinerary);
+router.delete('/:id', protect, isAdmin, ItineraryController.deleteItinerary);
 
 module.exports = router;
