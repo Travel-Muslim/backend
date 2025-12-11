@@ -27,7 +27,6 @@ const ArticleController = {
                 category
             });
 
-            // Format response sesuai spec
             const articles = rows.map(article => {
                 const date = new Date(article.created_at);
                 const tanggal = date.toLocaleDateString('id-ID', { 
@@ -94,7 +93,6 @@ const ArticleController = {
                 year: 'numeric' 
             });
 
-            // Parse sections from content (h2 tags)
             const sections = [];
             if (article.content) {
                 const h2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
@@ -118,7 +116,6 @@ const ArticleController = {
                 }
             }
 
-            // Response sesuai spec
             const responseData = {
                 judul: article.title,
                 tanggal: tanggal,
