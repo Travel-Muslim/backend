@@ -45,27 +45,7 @@ app.use(handleMulterError);
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get("/api-docs", (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Swagger UI</title>
-        <link rel="stylesheet" href="./swagger-ui.css" />
-      </head>
-      <body>
-        <div id="swagger-ui"></div>
-        <script src="./swagger-ui-bundle.js"></script>
-        <script>
-          window.onload = () => {
-            SwaggerUIBundle({
-              url: "/api-docs.json",
-              dom_id: "#swagger-ui"
-            });
-          };
-        </script>
-      </body>
-    </html>
-  `);
+  res.redirect(308, "https://saleema-tour-api-docs.vercel.app");
 });
 
 app.get("/api-docs.json", (req, res) => {
