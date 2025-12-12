@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const cors = require('cors');
 const corsOptions = require('../src/config/cors');
 const validateEnv = require('../src/config/validateEnv');
-const { swaggerUi, specs } = require('../src/config/swegger'); 
+const { swaggerUi, specs } = require('../src/config/swegger');
 const pool = require('../src/config/db');
 
 try {
@@ -68,15 +68,15 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Seleema Tour API Docs',
-}));
-
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(specs);
 });
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Seleema Tour API Docs',
+}));
 
 app.use('/user', userRoutes);
 app.use('/packages', packageRoutes);
