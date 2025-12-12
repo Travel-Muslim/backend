@@ -7,6 +7,7 @@ const swaggerUi = require('swagger-ui-express');
 const corsOptions = require('../src/config/cors');
 const validateEnv = require('../src/config/validateEnv');
 const swaggerSpec = require('../src/config/swagger');
+const pool = require('../src/config/db');
 
 try {
   validateEnv();
@@ -32,11 +33,10 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
-const corsOptions = require('../src/config/cors');
-   app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 app.get('/', (req, res) => {
   res.json({
@@ -106,11 +106,16 @@ app.use((err, req, res, next) => {
   const statusCode = err.status || err.statusCode || 500;
   const message = err.message || 'Internal server error';
   
-  res.status(statusCode).json({
+  const response = {
     success: false,
-    message: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+    message: message
+  };
+
+  if (process.env.NODE_ENV === 'development') {
+    response.stack = err.stack;
+  }
+  
+  res.status(statusCode).json(response);
 });
 
 module.exports = app;
