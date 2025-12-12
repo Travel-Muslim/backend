@@ -100,10 +100,10 @@ app.use((err, req, res, next) => {
     res.status(statusCode).json(response);
 });
 
-app.listen(port, () => {
-    console.log(`Server running at: http://localhost:${port}`)
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
-    console.log(`Documentation: http://localhost:${port}/api-docs`)
-})
+// app.listen(port, () => {
+//     console.log(`Server running at: http://localhost:${port}`)
+//     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+//     console.log(`Documentation: http://localhost:${port}/api-docs`)
+// })
 
 module.exports = app
