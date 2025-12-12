@@ -1,8 +1,8 @@
 const express = require("express");
 require("dotenv/config");
-const helmet = require("helmet");
+// const helmet = require("helmet");
 const morgan = require("morgan");
-const cors = require("cors");
+// const cors = require("cors");
 const userRoutes = require("./routes/UserRoutes");
 const packageRoutes = require("./routes/PackageRoutes");
 const articleRoutes = require("./routes/ArticleRoutes");
