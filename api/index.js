@@ -44,15 +44,29 @@ app.use(handleMulterError);
 
 // app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(specs, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  })
-);
+app.get("/api-docs", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Swagger UI</title>
+        <link rel="stylesheet" href="./swagger-ui.css" />
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script src="./swagger-ui-bundle.js"></script>
+        <script>
+          window.onload = () => {
+            SwaggerUIBundle({
+              url: "/api-docs.json",
+              dom_id: "#swagger-ui"
+            });
+          };
+        </script>
+      </body>
+    </html>
+  `);
+});
 
 app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
