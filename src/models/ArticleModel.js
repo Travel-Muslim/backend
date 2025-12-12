@@ -55,10 +55,30 @@ const ArticleModel = {
         return pool.query('SELECT * FROM article_categories ORDER BY name ASC');
     },
 
-    findByIdOrSlug: (idOrSlug) => {
+    findByIdOrSlug: async (value) => {
+        const isUUID = /^[0-9a-fA-F-]{36}$/.test(value);
+
+        if (isUUID) {
+            return pool.query(
+                `SELECT * FROM articles 
+                 WHERE id = $1 AND is_published = true`,
+                [value]
+            );
+        }
+
         return pool.query(
-            'SELECT * FROM articles WHERE (id = $1 OR slug = $1) AND is_published = true',
-            [idOrSlug]
+            `SELECT * FROM articles 
+             WHERE is_published = true
+             AND title ILIKE '%' || $1 || '%'
+             ORDER BY 
+                CASE 
+                    WHEN title ILIKE $1 || '%' THEN 1
+                    WHEN title ILIKE '%' || $1 || '%' THEN 2
+                    ELSE 3
+                END ASC,
+                created_at DESC
+             LIMIT 1`,
+            [value]
         );
     },
 

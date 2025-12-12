@@ -76,6 +76,8 @@ const ArticleController = {
 
     getById: async (req, res, next) => {
         try {
+            const { id } = req.params;
+            
             const { id_or_slug } = req.params;
             
             const { rows } = await ArticleModel.findByIdOrSlug(id_or_slug);

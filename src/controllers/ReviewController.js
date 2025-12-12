@@ -8,7 +8,7 @@ const {
     addMedia
 } = require('../models/ReviewModel');
 const { findById: findBookingById } = require('../models/BookingModel');
-const cloudinary = require('../config/cloudinary');
+const { uploadBufferToCloudinary } = require("../config/cloudinary");
 const commonHelper = require('../helpers/common');
 
 const ReviewController = {
@@ -76,94 +76,42 @@ const ReviewController = {
         }
     },
 
-    updateReview: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { rating, comment } = req.body;
-            const userId = req.user.id;
-
-            if (!rating && !comment) {
-                return commonHelper.badRequest(res, 'At least rating or comment is required');
-            }
-
-            if (rating && (rating < 1 || rating > 5)) {
-                return commonHelper.badRequest(res, 'Rating must be between 1.0 and 5.0');
-            }
-
-            const { rows: [review] } = await findById(id);
-            if (!review) {
-                return commonHelper.notFound(res, 'Review not found');
-            }
-            if (review.user_id !== userId) {
-                return commonHelper.forbidden(res, 'You do not have access to this review');
-            }
-
-            const { rows: [updated] } = await update(id, { rating, comment });
-
-            commonHelper.success(res, updated, 'Review updated successfully');
-
-        } catch (error) {
-            console.log(error);
-            commonHelper.error(res, 'Server error', 500);
-        }
-    },
-
-    deleteReview: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const userId = req.user.id;
-
-            const { rows: [review] } = await findById(id);
-            if (!review) {
-                return commonHelper.notFound(res, 'Review not found');
-            }
-            if (review.user_id !== userId) {
-                return commonHelper.forbidden(res, 'You do not have access to this review');
-            }
-
-            await remove(id);
-
-            commonHelper.success(res, null, 'Review deleted successfully');
-
-        } catch (error) {
-            console.log(error);
-            commonHelper.error(res, 'Server error', 500);
-        }
-    },
-
     uploadMedia: async (req, res) => {
         try {
             const { id } = req.params;
             const userId = req.user.id;
 
             if (!req.files || req.files.length === 0) {
-                return commonHelper.badRequest(res, 'At least one media file is required');
+            return commonHelper.badRequest(res, "At least one media file is required");
             }
 
-            const { rows: [review] } = await findById(id);
-            if (!review) {
-                return commonHelper.notFound(res, 'Review not found');
-            }
-            if (review.user_id !== userId) {
-                return commonHelper.forbidden(res, 'You do not have access to this review');
-            }
+            const reviewExists = await findById(id);
+            if (!reviewExists.rows.length)
+            return commonHelper.notFound(res, "Review not found");
+            if (reviewExists.rows[0].user_id !== userId)
+            return commonHelper.forbidden(res, "Forbidden");
 
-            const mediaUrls = [];
+            const urls = [];
+
             for (const file of req.files) {
-                const result = await cloudinary.uploader.upload(file.path, {
-                    folder: 'muslimah-travel/review-media',
-                    public_id: `review_${id}_${Date.now()}_${Math.random()}`
-                });
-                
-                await addMedia(id, result.secure_url, 'image');
-                mediaUrls.push(result.secure_url);
+            const uploaded = await uploadBufferToCloudinary(
+                file.buffer,
+                "muslimah-travel/review-media"
+            );
+
+            await addMedia(id, uploaded.secure_url, "image");
+            urls.push(uploaded.secure_url);
             }
 
-            commonHelper.success(res, { media_urls: mediaUrls }, 'Media uploaded successfully');
+            return commonHelper.success(
+            res,
+            { urls },
+            "Media uploaded successfully"
+            );
 
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     }
 };

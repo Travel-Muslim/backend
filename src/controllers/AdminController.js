@@ -96,6 +96,7 @@ const AdminController = {
         }
     },
 
+
     getAllUsers: async (req, res) => {
         try {
             const search = req.query.search?.trim();
@@ -165,43 +166,6 @@ const AdminController = {
             }, 'Get user successful');
         } catch (error) {
             console.error('getUserDetail error:', error);
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
-    },
-
-    createUser: async (req, res) => {
-        try {
-            const { namaLengkap, email, password, nomorTelepon } = req.body;
-
-            const validatedEmail = ValidationHelper.validateEmail(email);
-            const validatedName = ValidationHelper.validateString(namaLengkap, 'Nama lengkap', 2, 100);
-            const validatedPassword = ValidationHelper.validatePassword(password);
-            const validatedPhone = ValidationHelper.validatePhoneNumber(nomorTelepon, false);
-
-            const existing = await pool.query('SELECT id FROM users WHERE email = $1', [validatedEmail]);
-            if (existing.rows.length > 0) {
-                return commonHelper.badRequest(res, ERROR_MESSAGES.USER_ALREADY_EXISTS);
-            }
-
-            const hashedPassword = await bcrypt.hash(validatedPassword, 10);
-
-            const userData = {
-                id: uuidv4(),
-                full_name: validatedName,
-                email: validatedEmail,
-                password: hashedPassword,
-                phone_number: validatedPhone,
-                role: 'user'
-            };
-
-            await AdminModel.createUser(userData);
-
-            return commonHelper.created(res, { userId: userData.id }, SUCCESS_MESSAGES.USER_CREATED);
-        } catch (error) {
-            console.error('createUser error:', error);
             if (error instanceof ValidationError) {
                 return commonHelper.badRequest(res, error.message);
             }
@@ -348,14 +312,15 @@ const AdminController = {
 
     createPackage: async (req, res) => {
         try {
-            const { name, location, benua, maskapai, bandara, periode, harga, itinerary } = req.body;
+            const { name, location, benua, maskapai, bandara, periode, harga, itinerary, quota } = req.body;
 
             if (!name || !harga) {
-                return commonHelper.badRequest(res, ERROR_MESSAGES.PACKAGE_REQUIRED_FIELDS);
+                return commonHelper.badRequest(res, 'Name and harga are required');
             }
 
             const image = req.file ? req.file.path : null;
 
+            const { v4: uuidv4 } = require('uuid');
             const packageData = {
                 id: uuidv4(),
                 name: name,
@@ -367,46 +332,47 @@ const AdminController = {
                 duration: 5, 
                 itinerary: itinerary || null,
                 maskapai: maskapai || null,
-                bandara: bandara || null
+                bandara: bandara || null,
+                quota: quota ? parseInt(quota) : 20,
+                quota_filled: 0,
+                is_active: true
             };
 
             await AdminModel.createPackage(packageData);
 
-            return commonHelper.created(res, { packageId: packageData.id }, SUCCESS_MESSAGES.PACKAGE_CREATED);
+            return commonHelper.created(res, { 
+                packageId: packageData.id,
+                name: packageData.name,
+                image: packageData.image
+            }, 'Package created successfully');
         } catch (error) {
             console.error('createPackage error:', error);
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            return commonHelper.error(res, 'Internal server error', 500);
         }
     },
 
     updatePackage: async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, location, benua, maskapai, bandara, periode, harga, itinerary } = req.body;
-            
-            console.log('=== DEBUG UPDATE START ===');
-            console.log('Package ID:', id);
-            console.log('req.body:', req.body);
-            console.log('req.file:', req.file);
-            console.log('Destructured values:', { name, location, benua, maskapai, bandara, periode, harga });
-            
+            const { 
+                name, location, benua, maskapai, bandara, 
+                periode, harga, itinerary 
+            } = req.body;
+
             ValidationHelper.validateUUID(id, 'Package ID');
-            
+
             if (Object.keys(req.body).length === 0 && !req.file) {
-                return commonHelper.badRequest(res, 'Tidak ada data yang diupdate');
+                return commonHelper.badRequest(res, "Tidak ada data yang diupdate");
             }
-            
+
             const checkResult = await pool.query('SELECT * FROM packages WHERE id = $1', [id]);
-            
             if (checkResult.rows.length === 0) {
                 return commonHelper.notFound(res, ERROR_MESSAGES.PACKAGE_NOT_FOUND);
             }
-            
+
             const oldPackage = checkResult.rows[0];
-            console.log('Old package data:', oldPackage);
-            
             const updateData = {};
-            
+
             if (name) updateData.name = name;
             if (location) updateData.location = location;
             if (benua) updateData.benua = benua;
@@ -415,49 +381,48 @@ const AdminController = {
             if (periode) updateData.periode = periode;
             if (harga) updateData.harga = parseFloat(harga);
             if (itinerary) updateData.itinerary = itinerary;
-            
-            console.log('updateData object:', updateData);
-            console.log('updateData keys:', Object.keys(updateData));
-            
+
             if (req.file) {
-                updateData.image = req.file.path;
-                if (oldPackage.image) {
-                    try {
-                        const urlParts = oldPackage.image.split('/');
-                        const filename = urlParts[urlParts.length - 1];
-                        const publicId = `${CLOUDINARY_FOLDERS.PACKAGE_IMAGES}/${filename.split('.')[0]}`;
-                        await cloudinary.uploader.destroy(publicId);
-                    } catch (cloudinaryError) {
-                        console.error('Cloudinary delete error:', cloudinaryError);
-                    }
-                }
+                const uploaded = await uploadBufferToCloudinary(
+                    req.file.buffer,
+                    "muslimah-travel/package-images"
+                );
+
+                updateData.image = uploaded.secure_url;
+
             }
-            
-            console.log('Calling AdminModel.updatePackage with:', { id, updateData });
+
             const result = await AdminModel.updatePackage(id, updateData);
-            console.log('Update result:', result.rows[0]);
-            
             const pkg = result.rows[0];
-            
+
             const responseData = {
                 id: pkg.id,
                 namaPaket: pkg.name,
                 lokasi: pkg.location,
-                keberangkatan: pkg.periode ? new Date(pkg.periode).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : null,
+                keberangkatan: pkg.periode
+                    ? new Date(pkg.periode).toLocaleDateString("id-ID", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                    })
+                    : null,
                 maskapai: pkg.maskapai,
-                harga: parseFloat(pkg.harga)
+                harga: parseFloat(pkg.harga),
+                image: pkg.image
             };
-            
-            console.log('Response data:', responseData);
-            console.log('=== DEBUG UPDATE END ===');
-            
+
             return commonHelper.success(res, responseData, SUCCESS_MESSAGES.PACKAGE_UPDATED);
+
         } catch (error) {
-            console.error('updatePackage error:', error);
+            console.error("updatePackage error:", error);
             if (error instanceof ValidationError) {
                 return commonHelper.badRequest(res, error.message);
             }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            return commonHelper.error(
+                res,
+                ERROR_MESSAGES.INTERNAL_ERROR,
+                HTTP_STATUS.INTERNAL_SERVER_ERROR
+            );
         }
     },
 
@@ -542,42 +507,67 @@ const AdminController = {
         }
     },
 
-    getArticleDetail: async (req, res) => {
+    getById: async (req, res, next) => {
         try {
-            const { id } = req.params;
-            ValidationHelper.validateUUID(id, 'Article ID');
+            const { id } = req.params;  
+            
+            const { rows } = await ArticleModel.findByIdOrSlug(id);
 
-            const result = await AdminModel.getArticleById(id);
-
-            if (result.rows.length === 0) {
-                return commonHelper.notFound(res, ERROR_MESSAGES.ARTICLE_NOT_FOUND);
+            if (rows.length === 0) {
+                return commonHelper.notFound(res, 'Article not found');
             }
 
-            const article = result.rows[0];
+            const article = rows[0];
 
-            return commonHelper.success(res, {
+            const date = new Date(article.created_at);
+            const tanggal = date.toLocaleDateString('id-ID', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+
+            const sections = [];
+            if (article.content) {
+                const h2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
+                let match;
+
+                while ((match = h2Regex.exec(article.content)) !== null) {
+                    const title = match[1].replace(/<[^>]*>/g, '');
+                    const startIndex = match.index;
+                    
+                    const nextMatch = h2Regex.exec(article.content);
+                    const endIndex = nextMatch ? nextMatch.index : article.content.length;
+                    h2Regex.lastIndex = startIndex + match[0].length;
+                    
+                    const sectionContent = article.content.substring(startIndex + match[0].length, endIndex);
+                    
+                    sections.push({
+                        title: title,
+                        content: sectionContent.trim(),
+                        imageUrl: article.cover_image_url
+                    });
+                }
+            }
+
+            const responseData = {
                 judul: article.title,
-                tanggal: new Date(article.published_at || article.created_at).toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                }),
+                tanggal: tanggal,
                 content: article.content,
-                imageUrl: article.cover_image_url
-            }, 'Get article successful');
+                imageUrl: article.cover_image_url,
+                sections: sections
+            };
+
+            commonHelper.success(res, responseData, 'Get article successful');
+
         } catch (error) {
-            console.error('getArticleDetail error:', error);
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            console.log(error);
+            commonHelper.error(res, 'Server error', 500);
         }
     },
 
     createArticle: async (req, res) => {
         try {
             const { judul, tanggal, content } = req.body;
-            const image = req.file ? req.file.path : null;
 
             const validatedTitle = ValidationHelper.validateString(judul, 'Judul', 3, 255);
             const validatedContent = ValidationHelper.validateString(content, 'Content', 10, 50000);
@@ -586,7 +576,7 @@ const AdminController = {
                 id: uuidv4(),
                 title: validatedTitle,
                 content: validatedContent,
-                cover_image_url: image,
+                cover_image_url: req.file ? req.file.path : null,
                 published_at: tanggal || null,
                 is_published: false
             };
@@ -594,12 +584,13 @@ const AdminController = {
             const result = await AdminModel.createArticle(articleData);
 
             return commonHelper.created(res, { articleId: result.rows[0].id }, SUCCESS_MESSAGES.ARTICLE_CREATED);
+
         } catch (error) {
             console.error('createArticle error:', error);
             if (error instanceof ValidationError) {
                 return commonHelper.badRequest(res, error.message);
             }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, 500);
         }
     },
 
@@ -608,32 +599,28 @@ const AdminController = {
             const { id } = req.params;
             const { judul, tanggal, content } = req.body;
 
-            ValidationHelper.validateUUID(id, 'Article ID');
+            ValidationHelper.validateUUID(id, "Article ID");
 
             const updateData = {};
 
-            if (judul) updateData.title = ValidationHelper.validateString(judul, 'Judul', 3, 255, false);
-            if (content) updateData.content = ValidationHelper.validateString(content, 'Content', 10, 50000, false);
+            if (judul) updateData.title = judul;
+            if (content) updateData.content = content;
             if (tanggal) updateData.published_at = tanggal;
-            if (req.file) updateData.cover_image_url = req.file.path;
 
-            if (Object.keys(updateData).length === 0) {
-                return commonHelper.badRequest(res, 'Tidak ada data yang diupdate');
+            if (req.file) {
+                updateData.cover_image_url = req.file.path;
             }
 
             const result = await AdminModel.updateArticle(id, updateData);
 
-            if (result.rows.length === 0) {
+            if (result.rows.length === 0)
                 return commonHelper.notFound(res, ERROR_MESSAGES.ARTICLE_NOT_FOUND);
-            }
 
             return commonHelper.success(res, null, SUCCESS_MESSAGES.ARTICLE_UPDATED);
+
         } catch (error) {
-            console.error('updateArticle error:', error);
-            if (error instanceof ValidationError) {
-                return commonHelper.badRequest(res, error.message);
-            }
-            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+            console.error("updateArticle error:", error);
+            return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, 500);
         }
     },
 

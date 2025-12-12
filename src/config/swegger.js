@@ -11,11 +11,11 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5000/api',
+        url: 'http://localhost:3000', 
         description: 'Development server',
       },
       {
-        url: 'https://your-production-url.com/api',
+        url: 'https://your-production-url.com',
         description: 'Production server',
       },
     ],
@@ -34,7 +34,7 @@ const options = {
       },
     ],
   },
-  apis: ['./routes/*.js'], 
+  apis: ['./src/routes/*.js'],  
 };
 
 const specs = swaggerJsdoc(options);

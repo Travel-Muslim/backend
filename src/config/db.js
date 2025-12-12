@@ -1,32 +1,43 @@
 require('dotenv').config();
+require('dotenv').config();
 const { Pool } = require('pg');
 
-const pool = new Pool(
-  process.env.DATABASE_URL 
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: false
-        },
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000,
-      }
-    : {
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-      }
-);
+let poolConfig;
+if (process.env.DATABASE_URL) {
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  };
+}
 
-pool.on('connect', () => {
-  console.log('Database connected');
-});
+else if (process.env.DB_SSL === "true") {
+  poolConfig = {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    ssl: { rejectUnauthorized: false }
+  };
+}
 
-pool.on('error', (err) => {
-  console.error('Database error:', err.message);
-});
+else {
+  poolConfig = {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+  };
+}
+
+const pool = new Pool(poolConfig);
+
+pool.on('connect', () => console.log("Database connected"));
+pool.on('error', (err) => console.error("Database error:", err.message));
 
 module.exports = pool;
+

@@ -10,6 +10,8 @@ const {
 const commonHelper = require("../helpers/common");
 const authHelper = require("../helpers/auth.js");
 const pool = require("../config/db.js");
+const { uploadBufferToCloudinary } = require("../config/cloudinary");
+
 
 const UserController = {
     register: async (req, res, next) => {
@@ -217,65 +219,78 @@ const UserController = {
         }
     },
 
-    uploadAvatar: async (req, res, next) => {
+    uploadAvatar: async (req, res) => {
         try {
-            const userId = req.user.id;
-
-            if (!req.file) {
-                return commonHelper.error(res, "No file uploaded", 400);
+            const userId = req.user && req.user.id;
+            if (!userId) {
+                return commonHelper.unauthorized(res, "User not authenticated");
             }
 
-            const { rows: [user] } = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [userId]);
-       
-            if (user.avatar_url) {
+            if (!req.file) {
+                return commonHelper.badRequest(res, "Avatar file is required");
+            }
+
+            const uploaded = await uploadBufferToCloudinary(
+            req.file.buffer,
+            "muslimah-travel/avatars"
+            );
+
+            const avatarUrl = uploaded.secure_url;
+
+            const { rows: [user] } = await userModel.updateAvatar(req.user.id, uploaded.secure_url);
+
+            const query = `
+            UPDATE users
+            SET avatar_url = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+            RETURNING id, avatar_url
+            `;
+            const values = [avatarUrl, userId];
+
+            const { rows } = await pool.query(query, values);
+
+            if (!rows || rows.length === 0) {
+                return commonHelper.notFound(res, "User not found");
+            }
+
+            return commonHelper.success(res, {
+            avatar_url: uploaded.secure_url
+            }, "Avatar updated successfully");
+
+        } catch (error) {
+            console.log(error);
+            return commonHelper.error(res, "Server error", 500);
+        }
+    },
+        
+    deleteAvatar: async (req, res, next) => {
+            try {
+                const userId = req.user.id;
+
+                const { rows: [user] } = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [userId]);
+
+                if (!user.avatar_url) {
+                    return commonHelper.error(res, "No avatar to delete", 400);
+                }
+
                 const publicId = user.avatar_url.split('/').pop().split('.')[0];
                 try {
                     await cloudinary.uploader.destroy(publicId);
                 } catch (err) {
-                    console.log('Error deleting old avatar:', err);
+                    console.log('Error deleting avatar from Cloudinary:', err);
                 }
+
+                const query = 'UPDATE users SET avatar_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1';
+                await pool.query(query, [userId]);
+
+                return commonHelper.success(res, null, "Avatar deleted successfully");
+            } catch (error) {
+                console.log(error);
+                return commonHelper.error(res, "Server error", 500);
             }
+        },
 
-            const avatarUrl = req.file.path; 
-            const query = 'UPDATE users SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING avatar_url';
-            const result = await pool.query(query, [avatarUrl, userId]);
-
-            return commonHelper.success(res, {
-                avatarUrl: result.rows[0].avatar_url
-            }, "Avatar uploaded successfully");
-        } catch (error) {
-            console.log(error);
-            return commonHelper.error(res, "Server error", 500);
-        }
-    },
-
-    deleteAvatar: async (req, res, next) => {
-        try {
-            const userId = req.user.id;
-
-            const { rows: [user] } = await pool.query('SELECT avatar_url FROM users WHERE id = $1', [userId]);
-
-            if (!user.avatar_url) {
-                return commonHelper.error(res, "No avatar to delete", 400);
-            }
-
-            const publicId = user.avatar_url.split('/').pop().split('.')[0];
-            try {
-                await cloudinary.uploader.destroy(publicId);
-            } catch (err) {
-                console.log('Error deleting avatar from Cloudinary:', err);
-            }
-
-            const query = 'UPDATE users SET avatar_url = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1';
-            await pool.query(query, [userId]);
-
-            return commonHelper.success(res, null, "Avatar deleted successfully");
-        } catch (error) {
-            console.log(error);
-            return commonHelper.error(res, "Server error", 500);
-        }
-    },
-
-};
+    };
 
 module.exports = UserController;

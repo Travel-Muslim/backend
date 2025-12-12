@@ -15,9 +15,9 @@ const AdminModel = {
     getTopPackages: (limit) => {
         return pool.query(`
             SELECT 
-                p.name as package_name,
-                p.image as image_url,
-                COUNT(b.id) as booking_count
+                p.name AS package_name,
+                p.image AS image_url,
+                COUNT(b.id) AS booking_count
             FROM packages p
             LEFT JOIN bookings b ON p.id = b.package_id
             WHERE b.payment_status = 'paid'
@@ -120,14 +120,6 @@ const AdminModel = {
         `, [id]);
     },
 
-    createUser: (userData) => {
-        return pool.query(`
-            INSERT INTO users (id, full_name, email, password, phone_number, role)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id
-        `, [userData.id, userData.full_name, userData.email, userData.password, userData.phone_number, userData.role]);
-    },
-
     updateUser: (id, updateData) => {
         const fields = [];
         const values = [];
@@ -192,8 +184,11 @@ const AdminModel = {
 
     createPackage: (packageData) => {
         return pool.query(`
-            INSERT INTO packages (id, name, location, benua, image, periode, harga, duration, itinerary, maskapai, bandara)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO packages (
+                id, name, location, benua, image, periode, harga, duration, 
+                itinerary, maskapai, bandara, quota, quota_filled, is_active
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
         `, [
             packageData.id,
@@ -206,7 +201,10 @@ const AdminModel = {
             packageData.duration,
             packageData.itinerary,
             packageData.maskapai,
-            packageData.bandara
+            packageData.bandara,
+            packageData.quota || 20,
+            packageData.quota_filled || 0,
+            packageData.is_active !== undefined ? packageData.is_active : true
         ]);
     },
 
@@ -266,7 +264,15 @@ const AdminModel = {
 
     getArticleById: (id) => {
         return pool.query(`
-            SELECT id, title, content, cover_image_url, is_published, published_at, created_at
+            SELECT 
+                id, 
+                title, 
+                content, 
+                cover_image_url, 
+                is_published, 
+                published_at, 
+                created_at,
+                views
             FROM articles
             WHERE id = $1
         `, [id]);
@@ -437,74 +443,6 @@ const AdminModel = {
         return pool.query(query, values);
     },
 
-    getAllCommunityPosts: (limit, offset) => {
-        return pool.query(`
-            SELECT 
-                cp.id,
-                cp.title,
-                cp.content,
-                cp.created_at,
-                u.full_name as author_name,
-                COALESCE(AVG(r.rating), 0) as author_rating
-            FROM community_posts cp
-            JOIN users u ON cp.user_id = u.id
-            LEFT JOIN reviews r ON u.id = r.user_id
-            GROUP BY cp.id, cp.title, cp.content, cp.created_at, u.full_name
-            ORDER BY cp.created_at DESC
-            LIMIT $1 OFFSET $2
-        `, [limit, offset]);
-    },
-
-    countAllCommunityPosts: () => {
-        return pool.query(`SELECT COUNT(*) FROM community_posts`);
-    },
-
-    getCommunityPostsByMonth: (month, limit, offset) => {
-        return pool.query(`
-            SELECT 
-                cp.id,
-                cp.title,
-                cp.content,
-                cp.created_at,
-                u.full_name as author_name,
-                COALESCE(AVG(r.rating), 0) as author_rating
-            FROM community_posts cp
-            JOIN users u ON cp.user_id = u.id
-            LEFT JOIN reviews r ON u.id = r.user_id
-            WHERE EXTRACT(MONTH FROM cp.created_at) = $1
-            GROUP BY cp.id, cp.title, cp.content, cp.created_at, u.full_name
-            ORDER BY cp.created_at DESC
-            LIMIT $2 OFFSET $3
-        `, [month, limit, offset]);
-    },
-
-    countCommunityPostsByMonth: (month) => {
-        return pool.query(`
-            SELECT COUNT(*) FROM community_posts 
-            WHERE EXTRACT(MONTH FROM created_at) = $1
-        `, [month]);
-    },
-
-    getCommunityPostById: (id) => {
-        return pool.query(`
-            SELECT 
-                cp.id,
-                cp.title,
-                cp.content,
-                cp.created_at,
-                u.full_name as author_name,
-                COALESCE(AVG(r.rating), 0) as author_rating
-            FROM community_posts cp
-            JOIN users u ON cp.user_id = u.id
-            LEFT JOIN reviews r ON u.id = r.user_id
-            WHERE cp.id = $1
-            GROUP BY cp.id, cp.title, cp.content, cp.created_at, u.full_name
-        `, [id]);
-    },
-
-    deleteCommunityPost: (id) => {
-        return pool.query(`DELETE FROM community_posts WHERE id = $1 RETURNING *`, [id]);
-    }
 };
 
 module.exports = AdminModel;

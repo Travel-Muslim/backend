@@ -4,12 +4,11 @@ const findActiveByUser = async (userId, limit, offset) => {
   const query = `
     SELECT 
         b.id, b.booking_code, b.departure_date, b.return_date,
-        b.total_participants, b.total_price, b.status, b.payment_status, b.facilities,
-        p.id as package_id, p.name as package_name, p.image_url as package_image,
-        d.name as destination_name
+        b.total_participants, b.total_price, b.status, b.payment_status,
+        p.id as package_id, p.name as package_name, p.image as package_image,
+        p.location as destination_name
     FROM bookings b
     JOIN packages p ON b.package_id = p.id
-    JOIN destinations d ON p.destination_id = d.id
     WHERE b.user_id = $1 
     AND b.status IN ('pending', 'confirmed', 'paid')
     ORDER BY b.departure_date ASC
@@ -35,7 +34,7 @@ const findHistoryByUser = async (userId, limit, offset, statusFilter) => {
     SELECT 
         b.id, b.booking_code, b.booking_date, b.departure_date,
         b.total_participants, b.total_price, b.status, b.payment_status,
-        p.name as package_name, p.image_url as package_image
+        p.name as package_name, p.image as package_image
     FROM bookings b
     JOIN packages p ON b.package_id = p.id
     WHERE b.user_id = $1
@@ -68,12 +67,11 @@ const findById = async (bookingId) => {
     SELECT 
         b.*,
         u.full_name, u.email as user_email, u.phone_number,
-        p.name as package_name, p.image_url as package_image,
-        d.name as destination_name, d.location as destination_location
+        p.name as package_name, p.image as package_image,
+        p.location as destination_name, p.benua as destination_location
     FROM bookings b
     JOIN users u ON b.user_id = u.id
     JOIN packages p ON b.package_id = p.id
-    JOIN destinations d ON p.destination_id = d.id
     WHERE b.id = $1
   `;
   const result = await pool.query(query, [bookingId]);
@@ -85,7 +83,7 @@ const create = async (data) => {
   try {
     await client.query("BEGIN");
 
-    const pkgQuery = `SELECT price, quota, quota_filled, destination_id FROM packages WHERE id = $1 AND is_active = true FOR UPDATE`;
+    const pkgQuery = `SELECT harga as price, quota, quota_filled FROM packages WHERE id = $1 AND is_active = true FOR UPDATE`;
     const pkgRes = await client.query(pkgQuery, [data.package_id]);
 
     if (pkgRes.rows.length === 0) throw new Error("PACKAGE_NOT_FOUND");
@@ -102,25 +100,27 @@ const create = async (data) => {
     const paymentDeadline = new Date();
     paymentDeadline.setHours(paymentDeadline.getHours() + 24);
 
-    const contactName = data.passenger_details[0]?.fullname || data.fullname;
-    const contactPhone =
-      data.passenger_details[0]?.phone_number || data.phone_number;
-    const contactEmail = data.passenger_details[0]?.email || data.email;
+    const passengerDetails = Array.isArray(data.passenger_details) && data.passenger_details.length > 0 
+      ? data.passenger_details 
+      : [];
+    
+    const contactName = passengerDetails[0]?.fullname || data.fullname || 'Guest';
+    const contactPhone = passengerDetails[0]?.phone_number || data.phone_number || '';
+    const contactEmail = passengerDetails[0]?.email || data.email || '';
 
     const insertQuery = `
         INSERT INTO bookings (
-            user_id, package_id, destination_id, booking_code, booking_date, 
+            user_id, package_id, booking_code, booking_date, 
             departure_date, total_participants, total_price, status, 
             payment_status, fullname, phone_number, email, 
             booking_passengers, special_requests, payment_deadline
-        ) VALUES ($1, $2, $3, $4, CURRENT_DATE, $5, $6, $7, 'pending', 'unpaid', $8, $9, $10, $11, $12, $13)
+        ) VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, 'pending', 'unpaid', $7, $8, $9, $10, $11, $12)
         RETURNING *
     `;
 
     const values = [
       data.user_id,
       data.package_id,
-      pkg.destination_id,
       bookingCode,
       data.departure_date,
       data.total_participants,
@@ -128,12 +128,17 @@ const create = async (data) => {
       contactName,
       contactPhone,
       contactEmail,
-      JSON.stringify(data.passenger_details),
-      data.special_requests,
+      JSON.stringify(passengerDetails),
+      data.special_requests || null,
       paymentDeadline,
     ];
 
     const bookingRes = await client.query(insertQuery, values);
+
+    await client.query(
+      `INSERT INTO payments (booking_id, amount, status) VALUES ($1, $2, 'unpaid')`,
+      [bookingRes.rows[0].id, totalPrice]
+    );
 
     await client.query(
       `UPDATE packages SET quota_filled = quota_filled + $1 WHERE id = $2`,
@@ -166,10 +171,9 @@ const cancel = async (bookingId, reason) => {
 const findAll = async (filters, limit, offset) => {
   let query = `
     SELECT b.id, b.booking_code, b.departure_date, b.status, b.total_price, 
-           p.name as package_name
+           p.name as package_name, p.location as destination_name
     FROM bookings b
     JOIN packages p ON b.package_id = p.id
-    JOIN destinations d ON p.destination_id = d.id
     WHERE b.user_id = $1 
   `;
 
@@ -192,7 +196,7 @@ const findAll = async (filters, limit, offset) => {
     paramIndex++;
   }
   if (filters.search) {
-    query += ` AND (d.name ILIKE $${paramIndex} OR p.name ILIKE $${paramIndex})`;
+    query += ` AND (p.location ILIKE $${paramIndex} OR p.name ILIKE $${paramIndex})`;
     params.push(`%${filters.search}%`);
     paramIndex++;
   }

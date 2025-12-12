@@ -9,13 +9,12 @@ const WishlistModel = {
                 json_build_object(
                     'id', p.id,
                     'title', p.name,
-                    'destination_country', d.name,
-                    'price_per_pax', p.price,
-                    'thumbnail_url', p.image_url
+                    'destination_country', p.location,
+                    'price_per_pax', p.harga,
+                    'thumbnail_url', p.image
                 ) as tour_package
             FROM wishlists w
             JOIN packages p ON w.package_id = p.id
-            JOIN destinations d ON p.destination_id = d.id
             WHERE w.user_id = $1
             ORDER BY w.created_at DESC`,
             [userId]

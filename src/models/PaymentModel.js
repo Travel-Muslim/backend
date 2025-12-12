@@ -4,9 +4,9 @@ const PaymentModel = {
     findByBookingId: (bookingId) => {
         return pool.query(
             `SELECT 
-                id, booking_id, base_price, additional_fees, total_amount,
-                payment_status, payment_method, payment_proof_url,
-                payment_deadline, paid_at, created_at, updated_at
+                id, booking_id, amount,
+                status as payment_status, payment_method, payment_proof_url,
+                paid_at, created_at
              FROM payments 
              WHERE booking_id = $1`,
             [bookingId]
@@ -14,14 +14,13 @@ const PaymentModel = {
     },
 
     create: (data) => {
-        const { bookingId, basePrice, additionalFees, totalAmount, paymentDeadline } = data;
+        const { bookingId, amount } = data;
         return pool.query(
             `INSERT INTO payments (
-                booking_id, base_price, additional_fees, total_amount, 
-                payment_status, payment_deadline
-            ) VALUES ($1, $2, $3, $4, 'unpaid', $5)
+                booking_id, amount, status
+            ) VALUES ($1, $2, 'unpaid')
             RETURNING *`,
-            [bookingId, basePrice, additionalFees, totalAmount, paymentDeadline]
+            [bookingId, amount]
         );
     },
 
@@ -30,23 +29,10 @@ const PaymentModel = {
             `UPDATE payments 
              SET payment_proof_url = $1,
                  payment_method = $2,
-                 payment_status = 'pending',
-                 updated_at = CURRENT_TIMESTAMP
+                 status = 'pending'
              WHERE id = $3
              RETURNING *`,
             [proofUrl, paymentMethod, paymentId]
-        );
-    },
-
-    updatePaymentStatus: (paymentId, status) => {
-        return pool.query(
-            `UPDATE payments 
-             SET payment_status = $1,
-                 paid_at = CASE WHEN $1 = 'paid' THEN CURRENT_TIMESTAMP ELSE paid_at END,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2
-             RETURNING *`,
-            [status, paymentId]
         );
     }
 };
