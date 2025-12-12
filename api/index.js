@@ -15,6 +15,7 @@ const komunitasRoutes = require('./routes/KomunitasRoutes')
 const { handleMulterError } = require('./middlewares/upload') 
 const { swaggerUi, specs } = require('./config/swegger');
 const pool = require('./config/db');
+const serverless = require("serverless-http");
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -111,3 +112,12 @@ app.use((err, req, res, next) => {
 // })
 
 module.exports = app
+module.exports.handler = serverless(app);
+
+process.on("uncaughtException", err => {
+  console.error("UNCAUGHT", err);
+});
+
+process.on("unhandledRejection", err => {
+  console.error("UNHANDLED", err);
+});
