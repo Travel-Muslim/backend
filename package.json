@@ -7,8 +7,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "vercel-build": "echo 'Build complete'",
-    "build": "babel src -d dist",  
-    "prod": "NODE_ENV=production node dist/index.js" 
+    "build": "babel src -d dist",
+    "prod": "NODE_ENV=production node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +31,7 @@
     "multer-storage-cloudinary": "^4.0.0",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3",
+    "serverless-http": "^4.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^10.0.0",
