@@ -2,7 +2,7 @@ const express = require("express");
 require("dotenv/config");
 // const helmet = require("helmet");
 const morgan = require("morgan");
-// const cors = require("cors");
+const cors = require("cors");
 const userRoutes = require("./routes/UserRoutes");
 const packageRoutes = require("./routes/PackageRoutes");
 const articleRoutes = require("./routes/ArticleRoutes");
@@ -21,11 +21,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // app.use(helmet())
-// app.use(cors({
-//   origin: "*",
-//   methods: "GET,POST,PUT,DELETE,OPTIONS",
-//   allowedHeaders: "Content-Type, Authorization"
-// }));
+app.use(
+  cors({
+    origin: "*",
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
