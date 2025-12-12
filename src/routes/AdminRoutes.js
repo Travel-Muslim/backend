@@ -18,7 +18,7 @@ router.use(isAdmin);
  * @swagger
  * /admin/stats:
  *   get:
- *     summary: Get dashboard statistics
+ *     summary: Get dashboard statistics (admin only)
  *     description: Retrieve overall statistics including total bookings, profit, and active buyers
  *     tags: [Admin Dashboard]
  *     security:
@@ -66,7 +66,7 @@ router.get('/stats', protect, isAdmin, AdminController.getDashboardStats);
  * @swagger
  * /admin/top-packages:
  *   get:
- *     summary: Get top performing packages
+ *     summary: Get top performing packages (admin only)
  *     description: Retrieve the top 3 packages with the highest booking count
  *     tags: [Admin Dashboard]
  *     security:
@@ -115,7 +115,7 @@ router.get('/top-packages', protect, isAdmin, AdminController.getTopPackages);
  * @swagger
  * /admin/top-buyers:
  *   get:
- *     summary: Get top buyers
+ *     summary: Get top buyers (admin only)
  *     description: Retrieve the top 6 buyers with highest booking count and reviews
  *     tags: [Admin Dashboard]
  *     security:
@@ -168,7 +168,7 @@ router.get('/top-buyers', protect, isAdmin, AdminController.getTopBuyers);
  * @swagger
  * /admin/booking-status:
  *   get:
- *     summary: Get booking status by continent
+ *     summary: Get booking status by continent (admin only)
  *     description: Retrieve booking count grouped by continent (Asia, Europe, Australia, Africa)
  *     tags: [Admin Dashboard]
  *     security:
