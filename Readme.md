@@ -1,194 +1,111 @@
-# Postman Testing Guide - Muslimah Travel API
+#  Seleema Tour API - Muslimah Travel Platform
 
-Base URL: `http://localhost:3000`
+> RESTful API untuk platform travel khusus muslimah yang menyediakan paket umroh, tour halal, dan layanan perjalanan islami.
 
----
 
-## 1. REGISTER
-
-**Method:** `POST`  
-**URL:** `http://localhost:3000/user/register`  
-**Headers:** 
-- Content-Type: application/json
-
-**Body (raw - JSON):**
-```json
-{
-  "fullname": "Siti Muslimah",
-  "email": "siti@example.com",
-  "password": "password123"
-}
-```
+**Production URL:** `https://seleema-tour-api.vercel.app`  
+**API Documentation:** `https://seleema-tour-api.vercel.app/api-docs`
 
 ---
 
-## 2. LOGIN
+## Deskripsi
 
-**Method:** `POST`  
-**URL:** `http://localhost:3000/user/login`  
-**Headers:**
-- Content-Type: application/json
+Seleema Tour API adalah backend sistem manajemen travel yang dikhususkan untuk perjalanan muslimah. API ini menyediakan fitur-fitur lengkap untuk:
 
-**Body (raw - JSON):**
-```json
-{
-  "email": "siti@example.com",
-  "password": "password123"
-}
-```
-
-**Response:**
-```json
-{
-  "status": 200,
-  "message": "Login success",
-  "data": {
-    "id": "...",
-    "fullname": "Siti Muslimah",
-    "email": "siti@example.com",
-    "role": "user",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
-**❗ SIMPAN TOKEN INI - AKAN DIPAKAI UNTUK ENDPOINT SELANJUTNYA**
+- **Autentikasi & Autorisasi** - JWT-based authentication dengan role management
+- **Paket Travel** - CRUD untuk paket umroh, tour, dan perjalanan islami
+- **Booking & Payment** - Sistem pemesanan dan pembayaran terintegrasi
+- **Review & Rating** - Ulasan dari customer dengan moderasi admin
+- **Article/Blog** - CMS untuk konten edukatif dan informasi travel
+- **Community Forum** - Forum diskusi untuk jamaah
+- **Wishlist** - Simpan paket favorit
+- **Admin Dashboard** - Dashboard analytics dan manajemen
 
 ---
 
-## 3. FORGOT PASSWORD
+## Fitur Utama
 
-**Method:** `POST`  
-**URL:** `http://localhost:3000/user/forgot-password`  
-**Headers:**
-- Content-Type: application/json
+###  Authentication & Authorization
+- Register & Login dengan email
+- JWT access token & refresh token
+- Password reset via email token
+- Role-based access control (Admin, User)
+- Protected routes dengan middleware
 
-**Body (raw - JSON):**
-```json
-{
-  "email": "siti@example.com"
-}
-```
+### Package Management
+- CRUD paket travel (Umroh, Halal Tour, Wisata Islami)
+- Filter by kategori, harga, destinasi
+- Upload gambar paket (Cloudinary integration)
+- Status published/unpublished
+- Pagination & search
 
-**Response:**
-```json
-{
-  "status": 200,
-  "message": "Reset token generated",
-  "data": {
-    "resetToken": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-  }
-}
-```
+### Booking System
+- Create booking dengan validasi
+- Multiple payment methods
+- Upload bukti pembayaran
+- Status tracking (pending, confirmed, completed, cancelled)
+- Generate e-ticket PDF
+- Booking history
 
-**❗ SIMPAN resetToken INI**
+### Review & Rating
+- Submit review dengan rating (1-5)
+- Upload foto/video review (max 5 media)
+- Admin moderation (approve/reject)
+- Filter published reviews only
 
----
+### Content Management
+- CRUD artikel/blog
+- Kategori & tags
+- Featured articles
+- Upload cover image
+- Draft/Published status
 
-## 4. RESET PASSWORD
+### Community Features
+- Forum diskusi
+- Post, comment, like system
+- Share pengalaman perjalanan
 
-**Method:** `POST`  
-**URL:** `http://localhost:3000/user/reset-password`  
-**Headers:**
-- Content-Type: application/json
-
-**Body (raw - JSON):**
-```json
-{
-  "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "newPassword": "newpassword456"
-}
-```
-
----
-
-## 5. GET PROFILE (Butuh Token)
-
-**Method:** `GET`  
-**URL:** `http://localhost:3000/user/profile`  
-**Headers:**
-- Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-**Cara masukkan Bearer Token di Postman:**
-1. Tab "Authorization"
-2. Type: pilih "Bearer Token"
-3. Token: paste token dari login (tanpa kata "Bearer")
-
-**ATAU di tab Headers:**
-- Key: `Authorization`
-- Value: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+### Admin Dashboard
+- Total bookings statistics
+- Revenue analytics
+- Top packages performance
+- Booking status overview
+- User management
 
 ---
 
-## 6. GET ALL USERS (Admin Only)
+## Tech Stack
 
-**Method:** `GET`  
-**URL:** `http://localhost:3000/user/users`  
-**Headers:**
-- Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+**Runtime & Framework:**
+- Node.js v18+
+- Express.js v5.1.0
 
-**Catatan:** User harus role admin. Cara jadiin admin:
-```sql
-UPDATE users SET role = 'admin' WHERE email = 'siti@example.com';
-```
+**Database:**
+- PostgreSQL 14+
+- pg (node-postgres) v8.16.3
 
----
+**Authentication:**
+- JSON Web Token (JWT)
+- bcryptjs untuk password hashing
 
-## 7. UPDATE USER (Admin Only)
+**File Upload:**
+- Multer v2.0.2
+- Cloudinary v1.41.3
 
-**Method:** `PUT`  
-**URL:** `http://localhost:3000/user/users/uuid-user-yang-mau-diupdate`  
-**Headers:**
-- Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-- Content-Type: application/json
+**Documentation:**
+- Swagger UI Express v5.0.1
+- Swagger JSDoc v6.2.8
 
-**Body (raw - JSON):**
-```json
-{
-  "fullname": "Siti Updated",
-  "email": "siti.new@example.com"
-}
-```
+**Security:**
+- Helmet v8.1.0
+- CORS v2.8.5
+- Express Rate Limit v8.2.1
 
-**Contoh URL lengkap:**
-```
-http://localhost:4000/user/users/123e4567-e89b-12d3-a456-426614174000
-```
+**Other Tools:**
+- PDFKit v0.17.2 (E-ticket generation)
+- Morgan (HTTP logger)
+- Express Validator v7.3.1
+- dotenv v17.2.3
 
 ---
 
-## 8. DELETE USER (Admin Only)
-
-**Method:** `DELETE`  
-**URL:** `http://localhost:3000/user/users/uuid-user-yang-mau-dihapus`  
-**Headers:**
-- Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-**Contoh URL lengkap:**
-```
-http://localhost:4000/user/users/123e4567-e89b-12d3-a456-426614174000
-```
-
----
-
-## Cara Dapat UUID User
-
-1. Login sebagai admin
-2. Hit endpoint GET /user/users
-3. Copy id user yang mau diupdate/delete
-
----
-
-## Urutan Testing
-
-1. Register → dapat akun baru
-2. Login → dapat token
-3. Get Profile → test token works
-4. Forgot Password → dapat reset token  
-5. Reset Password → ganti password
-6. Login lagi → dengan password baru
-7. Jadiin admin (manual di database)
-8. Get All Users → lihat semua user
-9. Update User → edit user
-10. Delete User → hapus user
