@@ -1,124 +1,109 @@
-require('dotenv').config();
-const express = require('express');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const cors = require('cors');
-const corsOptions = require('../src/config/cors');
-const validateEnv = require('../src/config/validateEnv');
-const { swaggerUi, specs } = require('../src/config/swegger');
-const pool = require('../src/config/db');
+const express = require('express')
+require('dotenv/config')
+const helmet = require('helmet')
+const morgan = require('morgan')
+const cors = require('cors')
+const userRoutes = require('./routes/UserRoutes')
+const packageRoutes = require('./routes/PackageRoutes')
+const articleRoutes = require('./routes/ArticleRoutes')
+const wishlistRoutes = require('./routes/WishlistRoutes')
+const bookingRoutes = require('./routes/BookingRoutes')
+const reviewRoutes = require('./routes/ReviewRoutes')
+const paymentRoutes = require('./routes/PaymentRoutes')
+const adminRoutes = require('./routes/AdminRoutes')
+const komunitasRoutes = require('./routes/KomunitasRoutes')
+const { handleMulterError } = require('./middlewares/upload') 
+const { swaggerUi, specs } = require('./config/swegger');
+const pool = require('./config/db');
 
-try {
-  validateEnv();
-} catch (error) {
-  console.error('Environment validation failed:', error.message);
-  process.exit(1);
-}
+const app = express()
+const port = process.env.PORT || 3000
 
-const userRoutes = require('../src/routes/UserRoutes');
-const packageRoutes = require('../src/routes/PackageRoutes');
-const articleRoutes = require('../src/routes/ArticleRoutes');
-const wishlistRoutes = require('../src/routes/WishlistRoutes');
-const bookingRoutes = require('../src/routes/BookingRoutes');
-const forumRoutes = require('../src/routes/ForumRoutes');
-const reviewRoutes = require('../src/routes/ReviewRoutes');
-const paymentRoutes = require('../src/routes/PaymentRoutes');
-const communityRoutes = require('../src/routes/CommunityRoutes');
-const dashboardRoutes = require('../src/routes/DashboardRoutes');
-const { handleMulterError } = require('../src/middlewares/upload');
+app.use(helmet())
+app.use(cors())
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
-const app = express();
+app.use('/user', userRoutes)
+app.use('/packages', packageRoutes)
+app.use('/articles', articleRoutes)
+app.use('/wishlists', wishlistRoutes)
+app.use('/bookings', bookingRoutes)
+app.use('/reviews', reviewRoutes)
+app.use('/payments', paymentRoutes)
+app.use('/admin', adminRoutes)
+app.use('/komunitas', komunitasRoutes)
 
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: false,
-}));
+app.use(handleMulterError)
 
-app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Muslimah Travel API is running!',
-    documentation: '/api-docs',
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/health', async (req, res) => {
-  const healthCheck = {
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: 'disconnected'
-  };
-
-  try {
-    await pool.query('SELECT 1');
-    healthCheck.database = 'connected';
-    healthCheck.status = 'OK';
-    res.status(200).json(healthCheck);
-  } catch (error) {
-    healthCheck.database = 'error';
-    healthCheck.status = 'DEGRADED';
-    healthCheck.error = process.env.NODE_ENV === 'development' ? error.message : 'Database connection failed';
-    res.status(503).json(healthCheck);
-  }
-});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.get('/api-docs.json', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.send(specs);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(specs);
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Seleema Tour API Docs',
-}));
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Welcome to Muslimah Travel API',
+        documentation: '/api-docs',
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
+    })
+})
 
-app.use('/user', userRoutes);
-app.use('/packages', packageRoutes);
-app.use('/articles', articleRoutes);
-app.use('/wishlists', wishlistRoutes);
-app.use('/bookings', bookingRoutes);
-app.use('/forums', forumRoutes);
-app.use('/reviews', reviewRoutes);
-app.use('/payments', paymentRoutes);
-app.use('/community', communityRoutes);
-app.use('/dashboard', dashboardRoutes);
+app.get('/health', async (req, res) => {
+    const healthCheck = {
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: 'disconnected'
+    };
 
-app.use(handleMulterError);
+    try {
+        await pool.query('SELECT 1');
+        healthCheck.database = 'connected';
+        healthCheck.status = 'OK';
+        res.status(200).json(healthCheck);
+    } catch (error) {
+        healthCheck.database = 'error';
+        healthCheck.status = 'DEGRADED';
+        healthCheck.error = process.env.NODE_ENV === 'development' ? error.message : 'Database connection failed';
+        res.status(503).json(healthCheck);
+    }
+});
 
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint not found',
-    path: req.path
-  });
+    res.status(404).json({
+        success: false,
+        message: 'Endpoint not found',
+        path: req.path
+    });
 });
 
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  
-  const statusCode = err.status || err.statusCode || 500;
-  const message = err.message || 'Internal server error';
-  
-  const response = {
-    success: false,
-    message: message
-  };
-
-  if (process.env.NODE_ENV === 'development') {
-    response.stack = err.stack;
-  }
-  
-  res.status(statusCode).json(response);
+    console.error('Error:', err);
+    
+    const statusCode = err.status || err.statusCode || 500;
+    const message = err.message || 'Internal server error';
+    
+    const response = {
+        success: false,
+        message: message
+    };
+    if (process.env.NODE_ENV === 'development') {
+        response.stack = err.stack;
+    }
+    
+    res.status(statusCode).json(response);
 });
 
-module.exports = app;
+app.listen(port, () => {
+    console.log(`Server running at: http://localhost:${port}`)
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+    console.log(`Documentation: http://localhost:${port}/api-docs`)
+})
+
+module.exports = app
