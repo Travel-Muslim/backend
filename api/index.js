@@ -31,7 +31,10 @@ const app = express();
 
 app.use(helmet({
   contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: false,
 }));
+
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -70,6 +73,7 @@ app.get('/health', async (req, res) => {
 
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.send(specs);
 });
 
