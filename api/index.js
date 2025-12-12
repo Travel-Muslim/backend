@@ -3,10 +3,9 @@ const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cors = require('cors');
-const swaggerUi = require('swagger-ui-express');
 const corsOptions = require('../src/config/cors');
 const validateEnv = require('../src/config/validateEnv');
-const swaggerSpec = require('../src/config/swagger');
+const { swaggerUi, specs } = require('../src/config/swegger'); 
 const pool = require('../src/config/db');
 
 try {
@@ -69,14 +68,14 @@ app.get('/health', async (req, res) => {
   }
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Muslimah Travel API Docs',
+  customSiteTitle: 'Seleema Tour API Docs',
 }));
 
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
+  res.send(specs);
 });
 
 app.use('/user', userRoutes);
