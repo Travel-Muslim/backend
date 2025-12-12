@@ -6,7 +6,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "vercel-build": "echo 'Build complete'"
+    "vercel-build": "echo 'Build complete'",
+    "build": "babel src -d dist",  
+    "prod": "NODE_ENV=production node dist/index.js" 
   },
   "keywords": [],
   "author": "",

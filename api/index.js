@@ -32,7 +32,8 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
-app.use(cors(corsOptions));
+const corsOptions = require('../src/config/cors');
+   app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -47,12 +48,25 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+app.get('/health', async (req, res) => {
+  const healthCheck = {
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+    uptime: process.uptime(),
+    database: 'disconnected'
+  };
+
+  try {
+    await pool.query('SELECT 1');
+    healthCheck.database = 'connected';
+    healthCheck.status = 'OK';
+    res.status(200).json(healthCheck);
+  } catch (error) {
+    healthCheck.database = 'error';
+    healthCheck.status = 'DEGRADED';
+    healthCheck.error = process.env.NODE_ENV === 'development' ? error.message : 'Database connection failed';
+    res.status(503).json(healthCheck);
+  }
 });
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

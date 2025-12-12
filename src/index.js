@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/AdminRoutes')
 const komunitasRoutes = require('./routes/KomunitasRoutes')
 const { handleMulterError } = require('./middlewares/upload') 
 const { swaggerUi, specs } = require('./config/swegger');
+const pool = require('./config/db');
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -22,7 +23,7 @@ app.use(helmet())
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(morgan('dev'))
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 
 app.use('/user', userRoutes)
 app.use('/packages', packageRoutes)
@@ -42,16 +43,62 @@ app.get('/', (req, res) => {
     res.json({
         message: 'Welcome to Muslimah Travel API',
         documentation: '/api-docs',
-        version: '1.0.0'
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
     })
 })
 
-app.get('/user', (req, res) => {
-    res.json({ status: 'OK' })
-})
+app.get('/health', async (req, res) => {
+    const healthCheck = {
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: 'disconnected'
+    };
+
+    try {
+        await pool.query('SELECT 1');
+        healthCheck.database = 'connected';
+        healthCheck.status = 'OK';
+        res.status(200).json(healthCheck);
+    } catch (error) {
+        healthCheck.database = 'error';
+        healthCheck.status = 'DEGRADED';
+        healthCheck.error = process.env.NODE_ENV === 'development' ? error.message : 'Database connection failed';
+        res.status(503).json(healthCheck);
+    }
+});
+
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: 'Endpoint not found',
+        path: req.path
+    });
+});
+
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    
+    const statusCode = err.status || err.statusCode || 500;
+    const message = err.message || 'Internal server error';
+    
+    const response = {
+        success: false,
+        message: message
+    };
+    if (process.env.NODE_ENV === 'development') {
+        response.stack = err.stack;
+    }
+    
+    res.status(statusCode).json(response);
+});
 
 app.listen(port, () => {
     console.log(`Server running at: http://localhost:${port}`)
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+    console.log(`Documentation: http://localhost:${port}/api-docs`)
 })
 
 module.exports = app
