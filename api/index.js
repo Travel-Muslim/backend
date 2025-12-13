@@ -30,15 +30,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
-app.use("/api/user", userRoutes);
-app.use("/api/packages", packageRoutes);
-app.use("/api/articles", articleRoutes);
-app.use("/api/wishlists", wishlistRoutes);
-app.use("/api/bookings", bookingRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/payments", paymentRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/komunitas", komunitasRoutes);
+app.use("/user", userRoutes);
+app.use("/packages", packageRoutes);
+app.use("/articles", articleRoutes);
+app.use("/wishlists", wishlistRoutes);
+app.use("/bookings", bookingRoutes);
+app.use("/reviews", reviewRoutes);
+app.use("/payments", paymentRoutes);
+app.use("/admin", adminRoutes);
+app.use("/komunitas", komunitasRoutes);
 
 app.use(handleMulterError);
 
