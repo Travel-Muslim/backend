@@ -30,7 +30,17 @@ app.use(
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+  res.setHeader("Access-Control-Expose-Headers", "Content-Type, Authorization");
+
+  // Debug logging untuk multipart requests
+  if (req.headers["content-type"]?.includes("multipart")) {
+    console.log("=== MULTIPART REQUEST DETECTED ===");
+    console.log("Method:", req.method);
+    console.log("Path:", req.path);
+    console.log("Content-Type:", req.headers["content-type"]);
+  }
+
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });

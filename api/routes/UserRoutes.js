@@ -1,9 +1,8 @@
-const express = require('express');
-const UserController = require('../controllers/UserController');
-const AdminController = require('../controllers/AdminController');
-const { protect, isAdmin } = require('../middlewares/auth');
+const express = require("express");
+const UserController = require("../controllers/UserController");
+const AdminController = require("../controllers/AdminController");
+const { protect, isAdmin } = require("../middlewares/auth");
 const { upload } = require("../middlewares/upload");
-
 
 const router = express.Router();
 
@@ -95,7 +94,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/register', UserController.register);
+router.post("/register", UserController.register);
 
 /**
  * @swagger
@@ -165,7 +164,7 @@ router.post('/register', UserController.register);
  *       500:
  *         description: Internal server error
  */
-router.post('/login', UserController.login);
+router.post("/login", UserController.login);
 
 /**
  * @swagger
@@ -215,7 +214,7 @@ router.post('/login', UserController.login);
  *       500:
  *         description: Internal server error
  */
-router.post('/forgot-password', UserController.forgotPassword);
+router.post("/forgot-password", UserController.forgotPassword);
 
 /**
  * @swagger
@@ -264,7 +263,7 @@ router.post('/forgot-password', UserController.forgotPassword);
  *       500:
  *         description: Internal server error
  */
-router.post('/reset-password', UserController.resetPassword);
+router.post("/reset-password", UserController.resetPassword);
 
 /**
  * @swagger
@@ -294,7 +293,7 @@ router.post('/reset-password', UserController.resetPassword);
  *       500:
  *         description: Internal server error
  */
-router.post('/logout', protect, UserController.logout);
+router.post("/logout", protect, UserController.logout);
 
 /**
  * @swagger
@@ -339,7 +338,7 @@ router.post('/logout', protect, UserController.logout);
  *       500:
  *         description: Internal server error
  */
-router.get('/profile', protect, UserController.getProfile);
+router.get("/profile", protect, UserController.getProfile);
 
 /**
  * @swagger
@@ -406,7 +405,58 @@ router.get('/profile', protect, UserController.getProfile);
  *       500:
  *         description: Internal server error
  */
-router.put('/profile', protect, UserController.updateProfile);
+router.put("/profile", protect, UserController.updateProfile);
+
+/**
+ * @swagger
+ * /user/profile/avatar:
+ *   put:
+ *     summary: Upload user avatar
+ *     description: Upload or update user profile avatar
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - avatar
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *                 description: Avatar image file (max 5MB)
+ *     responses:
+ *       200:
+ *         description: Avatar uploaded successfully
+ *       400:
+ *         description: Bad request - File validation error
+ *       401:
+ *         description: Unauthorized
+ */
+router.put("/profile/avatar", protect, upload.single("avatar"), UserController.uploadAvatar);
+
+/**
+ * @swagger
+ * /user/profile/avatar:
+ *   delete:
+ *     summary: Delete user avatar
+ *     description: Remove user profile avatar
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Avatar deleted successfully
+ *       400:
+ *         description: No avatar to delete
+ *       401:
+ *         description: Unauthorized
+ */
+router.delete("/profile/avatar", protect, UserController.deleteAvatar);
 
 /**
  * @swagger
@@ -491,7 +541,7 @@ router.put("/profile/avatar", protect, upload.single("avatar"), UserController.u
  *       500:
  *         description: Internal server error
  */
-router.delete('/profile/avatar', protect, UserController.deleteAvatar);
+router.delete("/profile/avatar", protect, UserController.deleteAvatar);
 
 /**
  * @swagger
@@ -579,7 +629,7 @@ router.delete('/profile/avatar', protect, UserController.deleteAvatar);
  *       500:
  *         description: Internal server error
  */
-router.get('/', protect, isAdmin, AdminController.getAllUsers);
+router.get("/", protect, isAdmin, AdminController.getAllUsers);
 
 /**
  * @swagger
@@ -640,7 +690,7 @@ router.get('/', protect, isAdmin, AdminController.getAllUsers);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', protect, isAdmin, AdminController.getUserDetail);
+router.get("/:id", protect, isAdmin, AdminController.getUserDetail);
 
 /**
  * @swagger
@@ -713,7 +763,7 @@ router.get('/:id', protect, isAdmin, AdminController.getUserDetail);
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', protect, isAdmin, AdminController.updateUser);
+router.put("/:id", protect, isAdmin, AdminController.updateUser);
 
 /**
  * @swagger
@@ -756,6 +806,6 @@ router.put('/:id', protect, isAdmin, AdminController.updateUser);
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', protect, isAdmin, AdminController.deleteUser);
+router.delete("/:id", protect, isAdmin, AdminController.deleteUser);
 
 module.exports = router;
