@@ -25,6 +25,8 @@ const PackageController = {
         name: pkg.name,
         location: pkg.location,
         benua: pkg.benua,
+        maskapai: pkg.maskapai,
+        bandara: pkg.bandara,
         price: parseFloat(pkg.price),
         duration: `${pkg.duration} Hari`,
         departureDate: pkg.departure_date,

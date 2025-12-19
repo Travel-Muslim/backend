@@ -8,6 +8,8 @@ const PackageModel = {
                 name,
                 location,
                 benua,
+                maskapai,
+                bandara,
                 harga as price,
                 duration,
                 image,
