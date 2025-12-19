@@ -93,7 +93,7 @@ const { protect } = require("../middlewares/auth");
  *       500:
  *         description: Internal server error
  */
-router.get("/", protect, KomunitasController.getAll);
+router.get("/", KomunitasController.getAll);
 
 /**
  * @swagger

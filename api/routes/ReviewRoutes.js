@@ -1,7 +1,7 @@
-const express = require('express');
-const ReviewController = require('../controllers/ReviewController');
-const { protect } = require('../middlewares/auth');
-const { upload } = require('../middlewares/upload');;
+const express = require("express");
+const ReviewController = require("../controllers/ReviewController");
+const { protect } = require("../middlewares/auth");
+const { upload } = require("../middlewares/upload");
 
 const router = express.Router();
 
@@ -103,7 +103,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', protect, ReviewController.getAll);
+router.get("/", ReviewController.getAll);
 
 /**
  * @swagger
@@ -188,6 +188,6 @@ router.get('/', protect, ReviewController.getAll);
  *       500:
  *         description: Internal server error
  */
-router.post('/', protect, upload.array('media', 5), ReviewController.createReview);
+router.post("/", protect, upload.array("media", 5), ReviewController.createReview);
 
 module.exports = router;

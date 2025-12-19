@@ -1,10 +1,8 @@
-const express = require('express');
-const ArticleController = require('../controllers/ArticleController');
-const AdminController = require('../controllers/AdminController');
-const { protect, isAdmin } = require('../middlewares/auth');
-const { upload } = require('../middlewares/upload');
-
-
+const express = require("express");
+const ArticleController = require("../controllers/ArticleController");
+const AdminController = require("../controllers/AdminController");
+const { protect, isAdmin } = require("../middlewares/auth");
+const { upload } = require("../middlewares/upload");
 
 const router = express.Router();
 
@@ -114,7 +112,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', protect, ArticleController.getAll);
+router.get("/", ArticleController.getAll);
 
 /**
  * @swagger
@@ -184,7 +182,7 @@ router.get('/', protect, ArticleController.getAll);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', protect, ArticleController.getById);
+router.get("/:id", ArticleController.getById);
 
 /**
  * @swagger
@@ -256,7 +254,7 @@ router.get('/:id', protect, ArticleController.getById);
  *       500:
  *         description: Internal server error
  */
-router.post('/', protect, isAdmin, upload.single('cover_image'), AdminController.createArticle);
+router.post("/", protect, isAdmin, upload.single("cover_image"), AdminController.createArticle);
 
 /**
  * @swagger
@@ -329,8 +327,7 @@ router.post('/', protect, isAdmin, upload.single('cover_image'), AdminController
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', protect, isAdmin, upload.single('cover_image'), AdminController.updateArticle);
-
+router.put("/:id", protect, isAdmin, upload.single("cover_image"), AdminController.updateArticle);
 
 /**
  * @swagger
@@ -373,7 +370,7 @@ router.put('/:id', protect, isAdmin, upload.single('cover_image'), AdminControll
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', protect, isAdmin, AdminController.deleteArticle);
+router.delete("/:id", protect, isAdmin, AdminController.deleteArticle);
 
 /**
  * @swagger
@@ -417,6 +414,6 @@ router.delete('/:id', protect, isAdmin, AdminController.deleteArticle);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id/publish', protect, isAdmin, AdminController.togglePublish);
+router.patch("/:id/publish", protect, isAdmin, AdminController.togglePublish);
 
 module.exports = router;

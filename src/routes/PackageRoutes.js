@@ -1,7 +1,7 @@
-const express = require('express');
-const PackageController = require('../controllers/PackageController');
-const AdminController = require('../controllers/AdminController');
-const { protect, isAdmin } = require('../middlewares/auth');
+const express = require("express");
+const PackageController = require("../controllers/PackageController");
+const AdminController = require("../controllers/AdminController");
+const { protect, isAdmin } = require("../middlewares/auth");
 const { upload } = require("../middlewares/upload");
 
 const router = express.Router();
@@ -105,7 +105,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', protect, PackageController.getAll);
+router.get("/", PackageController.getAll);
 
 /**
  * @swagger
@@ -175,8 +175,8 @@ router.get('/', protect, PackageController.getAll);
  *                     itinerary:
  *                       type: object
  *                       description: Day-by-day itinerary (JSON object)
- *                       example: 
- *                         day1: 
+ *                       example:
+ *                         day1:
  *                           title: "Hari 1 - Keberangkatan"
  *                           activities: ["Check-in", "Penerbangan"]
  *                         day2:
@@ -189,7 +189,7 @@ router.get('/', protect, PackageController.getAll);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id', protect, PackageController.getPackageDetail);
+router.get("/:id", PackageController.getPackageDetail);
 
 /**
  * @swagger
@@ -402,8 +402,7 @@ router.post("/", protect, isAdmin, upload.single("image"), AdminController.creat
  *       500:
  *         description: Internal server error
  */
-router.put( '/:id', protect, isAdmin, upload.single('image'), AdminController.updatePackage );
-
+router.put("/:id", protect, isAdmin, upload.single("image"), AdminController.updatePackage);
 
 /**
  * @swagger
@@ -446,6 +445,6 @@ router.put( '/:id', protect, isAdmin, upload.single('image'), AdminController.up
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', protect, isAdmin, AdminController.deletePackage);
+router.delete("/:id", protect, isAdmin, AdminController.deletePackage);
 
 module.exports = router;
