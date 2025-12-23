@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+const pool = require('../config/db');
 
 const KomunitasModel = {
   list: async (keyword, month, limit, offset) => {
@@ -27,7 +27,7 @@ const KomunitasModel = {
           values.push(word);
           return `(k.judul ILIKE '%' || $${idx} || '%' OR k.deskripsi ILIKE '%' || $${idx} || '%')`;
         });
-        query += ` AND (${conditions.join(" OR ")})`;
+        query += ` AND (${conditions.join(' OR ')})`;
       } else {
         query += `
                     AND (k.judul ILIKE '%' || $${index} || '%' 
@@ -77,7 +77,7 @@ const KomunitasModel = {
           values.push(word);
           return `(k.judul ILIKE '%' || $${idx} || '%' OR k.deskripsi ILIKE '%' || $${idx} || '%')`;
         });
-        query += ` AND (${conditions.join(" OR ")})`;
+        query += ` AND (${conditions.join(' OR ')})`;
       } else {
         query += `
                     AND (k.judul ILIKE '%' || $${index} || '%'
@@ -250,7 +250,7 @@ const KomunitasModel = {
 
   // Get user info by id
   getUserInfo: (user_id) => {
-    return pool.query(`SELECT id, fullname, avatar FROM users WHERE id = $1`, [user_id]);
+    return pool.query(`SELECT id, full_name, avatar_url FROM users WHERE id = $1`, [user_id]);
   },
 };
 
