@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+const pool = require('../config/db');
 
 const PackageModel = {
   getAll: (filters) => {
@@ -13,7 +13,8 @@ const PackageModel = {
                 harga as price,
                 duration,
                 image,
-                periode as departure_date
+                periode_start,
+                periode_end
             FROM packages
             WHERE 1=1
         `;
@@ -34,7 +35,7 @@ const PackageModel = {
     }
 
     if (filters.month) {
-      const parts = filters.month.trim().split(" ");
+      const parts = filters.month.trim().split(' ');
       const monthName = parts[0];
       const year = parts[1];
 
@@ -86,7 +87,8 @@ const PackageModel = {
                 duration,
                 maskapai,
                 bandara,
-                periode,
+                periode_start,
+                periode_end,
                 image,
                 itinerary
             FROM packages

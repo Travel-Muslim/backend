@@ -1,7 +1,7 @@
-const PackageModel = require("../models/PackageModel");
-const commonHelper = require("../helpers/common");
-const { ValidationHelper, ValidationError } = require("../helpers/validation");
-const { PAGINATION, ERROR_MESSAGES, HTTP_STATUS } = require("../config/constants");
+const PackageModel = require('../models/PackageModel');
+const commonHelper = require('../helpers/common');
+const { ValidationHelper, ValidationError } = require('../helpers/validation');
+const { PAGINATION, ERROR_MESSAGES, HTTP_STATUS } = require('../config/constants');
 
 const PackageController = {
   getAll: async (req, res) => {
@@ -29,21 +29,26 @@ const PackageController = {
         bandara: pkg.bandara,
         price: parseFloat(pkg.price),
         duration: `${pkg.duration} Hari`,
-        departureDate: pkg.departure_date,
+        periode_start: pkg.periode_start,
+        periode_end: pkg.periode_end,
         imageUrl: pkg.image,
       }));
 
-      return commonHelper.success(res, data, "Get packages successful");
+      return commonHelper.success(res, data, 'Get packages successful');
     } catch (error) {
-      console.error("getAll error:", error);
-      return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      console.error('getAll error:', error);
+      return commonHelper.error(
+        res,
+        ERROR_MESSAGES.INTERNAL_ERROR,
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
+      );
     }
   },
 
   getPackageDetail: async (req, res) => {
     try {
       const { id } = req.params;
-      ValidationHelper.validateUUID(id, "Package ID");
+      ValidationHelper.validateUUID(id, 'Package ID');
 
       const result = await PackageModel.findById(id);
 
@@ -54,24 +59,20 @@ const PackageController = {
       const pkg = result.rows[0];
       const durasi = `${pkg.duration} Hari ${pkg.duration - 1} Malam`;
 
-      let periode = "Periode belum ditentukan";
       if (pkg.periode) {
         const date = new Date(pkg.periode);
-        periode = date.toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "long",
+        periode = date.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
         });
       }
 
       let itineraryData = {
-        startDate: periode,
-        endDate: periode,
-        schedule: [],
+        destinasi: [],
+        makan: [],
+        masjid: [],
+        transportasi: [],
       };
-
-      if (pkg.itinerary && typeof pkg.itinerary === "object") {
-        itineraryData.schedule = pkg.itinerary.schedule || [];
-      }
 
       return commonHelper.success(
         res,
@@ -80,23 +81,28 @@ const PackageController = {
           location: pkg.location,
           benua: pkg.benua,
           duration: durasi,
-          periode: periode,
+          periode_start: pkg.periode_start,
+          periode_end: pkg.periode_end,
           maskapai: pkg.maskapai,
           bandara: pkg.bandara,
           harga: parseFloat(pkg.harga),
           imageUrl: pkg.image,
-          tabs: ["Itenary", "Booking", "Testimoni"],
+          tabs: ['Itenary', 'Booking', 'Testimoni'],
           itinerary: itineraryData,
           testimonials: [],
         },
-        "Get package successful"
+        'Get package successful'
       );
     } catch (error) {
-      console.error("getPackageDetail error:", error);
+      console.error('getPackageDetail error:', error);
       if (error instanceof ValidationError) {
         return commonHelper.badRequest(res, error.message);
       }
-      return commonHelper.error(res, ERROR_MESSAGES.INTERNAL_ERROR, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      return commonHelper.error(
+        res,
+        ERROR_MESSAGES.INTERNAL_ERROR,
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
+      );
     }
   },
 };
