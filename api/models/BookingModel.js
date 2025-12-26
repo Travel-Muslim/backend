@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+const pool = require('../config/db');
 
 const findActiveByUser = async (userId, limit, offset) => {
   const query = `
@@ -81,16 +81,16 @@ const findById = async (bookingId) => {
 const create = async (data) => {
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     const pkgQuery = `SELECT harga as price, quota, quota_filled FROM packages WHERE id = $1 AND is_active = true FOR UPDATE`;
     const pkgRes = await client.query(pkgQuery, [data.package_id]);
 
-    if (pkgRes.rows.length === 0) throw new Error("PACKAGE_NOT_FOUND");
+    if (pkgRes.rows.length === 0) throw new Error('PACKAGE_NOT_FOUND');
     const pkg = pkgRes.rows[0];
 
     if (pkg.quota - pkg.quota_filled < data.total_participants) {
-      throw new Error("QUOTA_FULL");
+      throw new Error('QUOTA_FULL');
     }
 
     const totalPrice = pkg.price * data.total_participants;
@@ -100,13 +100,20 @@ const create = async (data) => {
     const paymentDeadline = new Date();
     paymentDeadline.setHours(paymentDeadline.getHours() + 24);
 
-    const passengerDetails = Array.isArray(data.passenger_details) && data.passenger_details.length > 0 
-      ? data.passenger_details 
-      : [];
-    
+    const passengerDetails =
+      Array.isArray(data.booking_passengers) && data.booking_passengers.length > 0
+        ? data.booking_passengers
+        : Array.isArray(data.passenger_details) && data.passenger_details.length > 0
+          ? data.passenger_details
+          : [];
+
     const contactName = passengerDetails[0]?.fullname || data.fullname || 'Guest';
     const contactPhone = passengerDetails[0]?.phone_number || data.phone_number || '';
     const contactEmail = passengerDetails[0]?.email || data.email || '';
+
+    const departureDate =
+      data.departure_date ||
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     const insertQuery = `
         INSERT INTO bookings (
@@ -122,7 +129,7 @@ const create = async (data) => {
       data.user_id,
       data.package_id,
       bookingCode,
-      data.departure_date,
+      departureDate,
       data.total_participants,
       totalPrice,
       contactName,
@@ -140,15 +147,15 @@ const create = async (data) => {
       [bookingRes.rows[0].id, totalPrice]
     );
 
-    await client.query(
-      `UPDATE packages SET quota_filled = quota_filled + $1 WHERE id = $2`,
-      [data.total_participants, data.package_id]
-    );
+    await client.query(`UPDATE packages SET quota_filled = quota_filled + $1 WHERE id = $2`, [
+      data.total_participants,
+      data.package_id,
+    ]);
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
     return bookingRes.rows[0];
   } catch (error) {
-    await client.query("ROLLBACK");
+    await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
@@ -201,9 +208,7 @@ const findAll = async (filters, limit, offset) => {
     paramIndex++;
   }
 
-  query += ` ORDER BY b.created_at DESC LIMIT $${paramIndex} OFFSET $${
-    paramIndex + 1
-  }`;
+  query += ` ORDER BY b.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
   params.push(limit, offset);
 
   const result = await pool.query(query, params);

@@ -59,24 +59,41 @@ const PackageController = {
       const pkg = result.rows[0];
       const durasi = `${pkg.duration} Hari ${pkg.duration - 1} Malam`;
 
-      if (pkg.periode) {
-        const date = new Date(pkg.periode);
-        periode = date.toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'long',
-        });
-      }
+      let itineraryData = [];
+      if (pkg.itinerary) {
+        try {
+          const parsedItinerary =
+            typeof pkg.itinerary === 'string' ? JSON.parse(pkg.itinerary) : pkg.itinerary;
 
-      let itineraryData = {
-        destinasi: [],
-        makan: [],
-        masjid: [],
-        transportasi: [],
-      };
+          if (parsedItinerary && !Array.isArray(parsedItinerary)) {
+            const maxLength = Math.max(
+              (parsedItinerary.destinasi || []).length,
+              (parsedItinerary.makan || []).length,
+              (parsedItinerary.masjid || []).length,
+              (parsedItinerary.transportasi || []).length
+            );
+
+            itineraryData = Array.from({ length: maxLength }, (_, idx) => ({
+              destinasi: parsedItinerary.destinasi?.[idx] ? [parsedItinerary.destinasi[idx]] : [],
+              makan: parsedItinerary.makan?.[idx] ? [parsedItinerary.makan[idx]] : [],
+              masjid: parsedItinerary.masjid?.[idx] ? [parsedItinerary.masjid[idx]] : [],
+              transportasi: parsedItinerary.transportasi?.[idx]
+                ? [parsedItinerary.transportasi[idx]]
+                : [],
+            }));
+          } else if (Array.isArray(parsedItinerary)) {
+            itineraryData = parsedItinerary;
+          }
+        } catch (error) {
+          console.error(error.message, error);
+          itineraryData = [];
+        }
+      }
 
       return commonHelper.success(
         res,
         {
+          id: pkg.id,
           name: pkg.name,
           location: pkg.location,
           benua: pkg.benua,
