@@ -111,15 +111,27 @@ const BookingController = {
       function writeRow(label, value) {
         doc.font('Helvetica-Bold').fillColor('#000').fontSize(13).text(label, labelX, y);
         y += 18;
-        doc.font('Helvetica').fillColor('#444').fontSize(13).text(value, labelX, y);
+        doc
+          .font('Helvetica')
+          .fillColor('#444')
+          .fontSize(13)
+          .text(value || '-', labelX, y);
         y += 28;
       }
 
       writeRow('Booking Code :', booking.booking_code);
       writeRow('Package :', booking.package_name);
-      writeRow('Date :', booking.departure_date);
-      writeRow('Email :', booking.email);
-      writeRow('Traveler :', booking.full_name || booking.fullname);
+      writeRow(
+        'Departure Date :',
+        new Date(booking.departure_date).toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        })
+      );
+      writeRow('Email :', booking.email || booking.user_email);
+      writeRow('Traveler :', booking.fullname || booking.full_name);
+      writeRow('Total Participants :', booking.total_participants?.toString() || '1');
 
       doc
         .fillColor('#7b4ab8')
@@ -150,13 +162,6 @@ const BookingController = {
 
       if (booking.status === 'cancelled') {
         return commonHelper.badRequest(res, 'Booking already cancelled');
-      }
-
-      if (new Date(booking.departure_date) <= new Date()) {
-        return commonHelper.badRequest(
-          res,
-          'Cannot cancel booking. Trip has already started or passed.'
-        );
       }
 
       const updatedBooking = await Booking.cancel(req.params.booking_id, req.body.cancel_reason);

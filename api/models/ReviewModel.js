@@ -1,9 +1,9 @@
 const pool = require('../config/db');
 
 const ReviewModel = {
-    findAll: (userId, limit, offset) => {
-        return pool.query(
-            `SELECT 
+  findAll: (userId, limit, offset) => {
+    return pool.query(
+      `SELECT 
                 r.id, r.rating, r.comment, r.is_published, r.created_at,
                 json_build_object(
                     'id', p.id,
@@ -16,73 +16,67 @@ const ReviewModel = {
             WHERE r.user_id = $1
             ORDER BY r.created_at DESC
             LIMIT $2 OFFSET $3`,
-            [userId, limit, offset]
-        );
-    },
+      [userId, limit, offset]
+    );
+  },
 
-    findById: (id) => {
-        return pool.query(
-            `SELECT * FROM reviews WHERE id = $1`,
-            [id]
-        );
-    },
+  findById: (id) => {
+    return pool.query(`SELECT * FROM reviews WHERE id = $1`, [id]);
+  },
 
-    checkBookingReview: (bookingId) => {
-        return pool.query(
-            'SELECT id FROM reviews WHERE booking_id = $1',
-            [bookingId]
-        );
-    },
+  checkBookingReview: (bookingId) => {
+    return pool.query('SELECT id FROM reviews WHERE booking_id = $1', [bookingId]);
+  },
 
-    create: (data) => {
-        const { userId, bookingId, packageId, rating, comment } = data;
-        return pool.query(
-            `INSERT INTO reviews (user_id, booking_id, tour_package_id, rating, comment, is_published)
-             VALUES ($1, $2, $3, $4, $5, false)
-             RETURNING id, rating, is_published, created_at`,
-            [userId, bookingId, packageId, rating, comment]
-        );
-    },
+  create: (data) => {
+    const { userId, bookingId, packageId, rating, comment, images } = data;
+    console.log('ReviewModel.create called with:', {
+      userId,
+      bookingId,
+      packageId,
+      rating,
+      commentLength: comment?.length,
+      imagesCount: images?.length || 0,
+    });
 
-    update: (id, data) => {
-        const { rating, comment } = data;
-        let query = 'UPDATE reviews SET updated_at = CURRENT_TIMESTAMP';
-        const params = [];
-        let paramIndex = 1;
+    // Convert images array to JSON
+    const imagesJson = images && images.length > 0 ? JSON.stringify(images) : null;
 
-        if (rating) {
-            query += `, rating = $${paramIndex}`;
-            params.push(rating);
-            paramIndex++;
-        }
+    return pool.query(
+      `INSERT INTO reviews (user_id, booking_id, package_id, rating, review_text, images)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, rating, review_text, images, created_at`,
+      [userId, bookingId, packageId, rating, comment, imagesJson]
+    );
+  },
 
-        if (comment) {
-            query += `, comment = $${paramIndex}`;
-            params.push(comment);
-            paramIndex++;
-        }
+  update: (id, data) => {
+    const { rating, comment } = data;
+    let query = 'UPDATE reviews SET updated_at = CURRENT_TIMESTAMP';
+    const params = [];
+    let paramIndex = 1;
 
-        query += ` WHERE id = $${paramIndex} RETURNING *`;
-        params.push(id);
-
-        return pool.query(query, params);
-    },
-
-    remove: (id) => {
-        return pool.query(
-            'DELETE FROM reviews WHERE id = $1 RETURNING id',
-            [id]
-        );
-    },
-
-    addMedia: (reviewId, mediaUrl, mediaType) => {
-        return pool.query(
-            `INSERT INTO review_media (review_id, media_url, media_type)
-             VALUES ($1, $2, $3)
-             RETURNING id, media_url, media_type`,
-            [reviewId, mediaUrl, mediaType]
-        );
+    if (rating) {
+      query += `, rating = $${paramIndex}`;
+      params.push(rating);
+      paramIndex++;
     }
+
+    if (comment) {
+      query += `, comment = $${paramIndex}`;
+      params.push(comment);
+      paramIndex++;
+    }
+
+    query += ` WHERE id = $${paramIndex} RETURNING *`;
+    params.push(id);
+
+    return pool.query(query, params);
+  },
+
+  remove: (id) => {
+    return pool.query('DELETE FROM reviews WHERE id = $1 RETURNING id', [id]);
+  },
 };
 
 module.exports = ReviewModel;

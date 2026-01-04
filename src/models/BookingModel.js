@@ -3,10 +3,9 @@ const pool = require('../config/db');
 const findActiveByUser = async (userId, limit, offset) => {
   const query = `
     SELECT 
-        b.id, b.booking_code, b.departure_date, b.return_date,
-        b.total_participants, b.total_price, b.status, b.payment_status,
+    b.id as booking_id, b.booking_code as booking_code, b.booking_date as booking_date, b.departure_date as booking_departure_date, b.return_date as booking_return_date, b.total_participants as booking_total_participants, b.total_price as booking_total_price, b.status as booking_status, b.payment_status as booking_payment_status, b.total_price as booking_total_price, b.payment_deadline as booking_payment_deadline, b.fullname as booking_fullname, b.phone_number as booking_phone_number, b.email as booking_email, b.passport_number as booking_passport_number, b.passport_expiry as booking_passport_expiry, b.nationality as booking_nationality, 
         p.id as package_id, p.name as package_name, p.image as package_image,
-        p.location as destination_name
+        p.location as package_location, p.benua as package_benua, p.periode_start as package_periode_start, p.periode_end as package_periode_end, p.maskapai as package_maskapai, p.bandara as package_bandara
     FROM bookings b
     JOIN packages p ON b.package_id = p.id
     WHERE b.user_id = $1 
@@ -34,9 +33,12 @@ const findHistoryByUser = async (userId, limit, offset, statusFilter) => {
     SELECT 
         b.id, b.booking_code, b.booking_date, b.departure_date,
         b.total_participants, b.total_price, b.status, b.payment_status,
-        p.name as package_name, p.image as package_image
+        p.name as package_name, p.image as package_image, p.location as package_location,
+        p.maskapai as package_maskapai, p.bandara as package_bandara,
+        CASE WHEN r.id IS NOT NULL THEN true ELSE false END as has_review
     FROM bookings b
     JOIN packages p ON b.package_id = p.id
+    LEFT JOIN reviews r ON r.booking_id = b.id
     WHERE b.user_id = $1
   `;
 
